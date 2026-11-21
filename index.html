@@ -1,0 +1,3456 @@
+<!DOCTYPE html>
+<html lang="ru" class="dark">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <title>TAB — Telegram Mini App</title>
+  <script src="https://telegram.org/js/telegram-web-app.js"></script>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Cinzel+Decorative:wght@700;900&family=Inter:wght@400;500;600;700&family=Manrope:wght@400;500;600;700;800&family=Permanent+Marker&family=Pinyon+Script&family=Shojumaru&display=swap" rel="stylesheet">
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          fontFamily: {
+            sans: ['Manrope', 'Inter', 'system-ui', 'sans-serif'],
+            display: ['Shojumaru', 'Permanent Marker', 'Cinzel Decorative', 'serif'],
+            calligraphy: ['Pinyon Script', 'Cinzel Decorative', 'cursive'],
+          },
+          colors: {
+            obsidian: '#0A090A',
+            surface: '#121012',
+            elevated: '#171417',
+            crimson: {
+              900: '#4A090C',
+              700: '#9E1418',
+              600: '#C41E24',
+              500: '#E0282F',
+            },
+            hairline: '#2A2325',
+          }
+        }
+      }
+    }
+  </script>
+  <style>
+    * {
+      box-sizing: border-box;
+      -webkit-tap-highlight-color: transparent;
+    }
+
+    html, body {
+      margin: 0;
+      padding: 0;
+      background-color: #0A090A;
+      color: #F6EFEA;
+      font-family: 'Manrope', 'Inter', sans-serif;
+      overflow-x: hidden;
+    }
+
+    .font-brand-brush {
+      font-family: 'Shojumaru', 'Permanent Marker', 'Cinzel Decorative', serif;
+      letter-spacing: 0.04em;
+      color: #FFF7F2;
+    }
+
+    .font-editorial-script {
+      font-family: 'Pinyon Script', 'Cinzel Decorative', cursive;
+      color: #E8383F;
+    }
+
+    @keyframes tabStageReveal {
+      0% {
+        opacity: 0;
+        transform: translateY(14px) scale(0.985);
+        filter: blur(4px);
+      }
+      65% {
+        opacity: 1;
+        filter: blur(0);
+      }
+      100% {
+        opacity: 1;
+        transform: translateY(0) scale(1);
+        filter: blur(0);
+      }
+    }
+
+    .tab-stage-enter {
+      animation: tabStageReveal 0.34s cubic-bezier(0.22, 1, 0.36, 1) both;
+    }
+
+    .btn-press {
+      transition: transform 140ms ease, background-color 160ms ease, border-color 160ms ease;
+    }
+
+    .btn-press:active {
+      transform: scale(0.975);
+    }
+
+    .ambient-backdrop-layer {
+      position: fixed;
+      inset: 0;
+      z-index: 0;
+      pointer-events: none;
+      overflow: hidden;
+      background-color: #0A090A;
+    }
+
+    .ambient-backdrop-photo {
+      position: absolute;
+      inset: 0;
+      background-position: center;
+      background-repeat: no-repeat;
+      background-size: min(86vw, 720px) auto;
+      opacity: 0.16;
+      filter: invert(1) contrast(1.28) saturate(1.35);
+      mix-blend-mode: screen;
+      transform: scale(1.03);
+    }
+
+    .ambient-backdrop-scrim {
+      position: absolute;
+      inset: 0;
+      background:
+        radial-gradient(circle at 50% 36%, rgba(158, 20, 24, 0.16) 0%, rgba(10, 9, 10, 0.72) 56%, rgba(10, 9, 10, 0.94) 100%),
+        linear-gradient(180deg, rgba(10, 9, 10, 0.68) 0%, rgba(10, 9, 10, 0.40) 50%, rgba(10, 9, 10, 0.85) 100%);
+    }
+
+    @keyframes creationSquarePulse {
+      0%, 100% {
+        transform: scale(1) rotate(0deg);
+        box-shadow: 0 0 0 0 rgba(196, 30, 36, 0.42), inset 0 0 18px rgba(196, 30, 36, 0.16);
+      }
+      50% {
+        transform: scale(1.04) rotate(1.5deg);
+        box-shadow: 0 0 28px 2px rgba(196, 30, 36, 0.32), inset 0 0 24px rgba(196, 30, 36, 0.25);
+      }
+    }
+
+    @keyframes creationSweep {
+      0% { transform: translateY(-110%); opacity: 0; }
+      25% { opacity: 0.8; }
+      100% { transform: translateY(320%); opacity: 0; }
+    }
+
+    .creation-square-box {
+      animation: creationSquarePulse 1.55s ease-in-out infinite;
+    }
+
+    .creation-sweep-bar {
+      animation: creationSweep 1.3s linear infinite;
+    }
+
+    .glass-panel {
+      background: rgba(18, 16, 18, 0.34);
+      backdrop-filter: blur(10px);
+      -webkit-backdrop-filter: blur(10px);
+      border: 1px solid rgba(42, 35, 37, 0.68);
+    }
+
+    .glass-field {
+      background: rgba(23, 20, 23, 0.32);
+      backdrop-filter: blur(6px);
+      -webkit-backdrop-filter: blur(6px);
+      border: 1px solid rgba(42, 35, 37, 0.68);
+    }
+
+    .wavy-contour {
+      border: 1.5px solid rgba(196, 30, 36, 0.42);
+      border-radius: 22px 14px 24px 16px / 15px 23px 14px 21px;
+      transition: border-color 180ms ease, box-shadow 180ms ease, background-color 180ms ease;
+    }
+
+    .wavy-contour:hover {
+      border-color: rgba(196, 30, 36, 0.65);
+    }
+
+    .wavy-contour:focus,
+    .wavy-contour:focus-within {
+      border-color: rgba(224, 40, 47, 0.92);
+      box-shadow: 0 0 0 3px rgba(158, 20, 24, 0.22);
+      background-color: rgba(23, 20, 23, 0.42);
+    }
+
+    @keyframes dockActivePop {
+      0% {
+        transform: translateY(1px) scale(0.93);
+      }
+      55% {
+        transform: translateY(-5px) scale(1.045);
+      }
+      100% {
+        transform: translateY(-3px) scale(1.02);
+      }
+    }
+
+    @keyframes dockPulseGlow {
+      0%, 100% {
+        box-shadow: 0 8px 22px rgba(224, 40, 47, 0.44), 0 0 0 0 rgba(224, 40, 47, 0.35), inset 0 1px 0 rgba(255, 255, 255, 0.28);
+      }
+      50% {
+        box-shadow: 0 10px 26px rgba(224, 40, 47, 0.62), 0 0 14px 2px rgba(224, 40, 47, 0.28), inset 0 1px 0 rgba(255, 255, 255, 0.36);
+      }
+    }
+
+    @keyframes dockSheenSweep {
+      0% {
+        transform: translateX(-140%) skewX(-22deg);
+        opacity: 0;
+      }
+      25% {
+        opacity: 0.75;
+      }
+      100% {
+        transform: translateX(220%) skewX(-22deg);
+        opacity: 0;
+      }
+    }
+
+    .mobile-dock-nav {
+      background: rgba(14, 12, 14, 0.94);
+      backdrop-filter: blur(18px);
+      -webkit-backdrop-filter: blur(18px);
+      border-top: 1px solid rgba(224, 40, 47, 0.36);
+      box-shadow: 0 -12px 34px rgba(0, 0, 0, 0.78);
+      padding-bottom: max(0.6rem, env(safe-area-inset-bottom));
+    }
+
+    .mobile-nav-btn {
+      position: relative;
+      overflow: hidden;
+      font-family: 'Manrope', 'Inter', system-ui, sans-serif;
+      letter-spacing: 0.015em;
+      transition: transform 200ms cubic-bezier(0.22, 1, 0.36, 1), background 200ms ease, border-color 200ms ease, box-shadow 200ms ease, color 200ms ease;
+    }
+
+    .mobile-nav-btn::after {
+      content: '';
+      position: absolute;
+      inset: 0;
+      width: 48%;
+      background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.24), transparent);
+      transform: translateX(-140%) skewX(-22deg);
+      pointer-events: none;
+    }
+
+    .mobile-nav-btn--idle {
+      background: linear-gradient(180deg, rgba(28, 24, 28, 0.86) 0%, rgba(19, 16, 19, 0.90) 100%);
+      border: 1px solid rgba(255, 255, 255, 0.09);
+      color: #CFC5C3;
+      box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.05);
+    }
+
+    .mobile-nav-btn--idle:hover {
+      border-color: rgba(224, 40, 47, 0.55);
+      color: #FFFFFF;
+      transform: translateY(-2px);
+      background: linear-gradient(180deg, rgba(38, 31, 36, 0.94) 0%, rgba(25, 20, 24, 0.96) 100%);
+    }
+
+    .mobile-nav-btn:active {
+      transform: scale(0.93) !important;
+    }
+
+    .mobile-nav-btn--active {
+      background: linear-gradient(145deg, #FF363E 0%, #C41E24 48%, #880E12 100%);
+      border: 1px solid rgba(255, 185, 188, 0.52);
+      color: #FFFFFF;
+      animation: dockActivePop 340ms cubic-bezier(0.22, 1, 0.36, 1) both, dockPulseGlow 2.4s ease-in-out 340ms infinite;
+    }
+
+    .mobile-nav-btn--active::after {
+      animation: dockSheenSweep 1.9s ease-in-out infinite;
+    }
+
+    .mobile-nav-indicator {
+      display: block;
+      width: 18px;
+      height: 3px;
+      border-radius: 999px;
+      margin-top: 3px;
+      background: rgba(255, 255, 255, 0.92);
+      box-shadow: 0 0 8px rgba(255, 255, 255, 0.75);
+    }
+
+    .no-scrollbar::-webkit-scrollbar {
+      display: none;
+    }
+    .no-scrollbar {
+      -ms-overflow-style: none;
+      scrollbar-width: none;
+    }
+  </style>
+</head>
+<body class="bg-obsidian text-zinc-100 antialiased selection:bg-crimson-700 selection:text-white">
+  <div id="root"></div>
+
+  <script src="https://unpkg.com/react@18/umd/react.production.min.js" crossorigin></script>
+  <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js" crossorigin></script>
+
+  <script>
+    const { useState, useEffect, useMemo, useRef, createElement: h } = React;
+
+    // =========================================================================
+    // 0. TELEGRAM MINI APP SDK ИНТЕГРАЦИЯ
+    // =========================================================================
+    const tg = window.Telegram && window.Telegram.WebApp ? window.Telegram.WebApp : null;
+
+    function tgHaptic(type = 'light') {
+      try {
+        if (tg && tg.HapticFeedback) {
+          if (type === 'success' || type === 'warning' || type === 'error') {
+            tg.HapticFeedback.notificationOccurred(type);
+          } else {
+            tg.HapticFeedback.impactOccurred(type);
+          }
+        }
+      } catch (e) {}
+    }
+
+    function sendPayloadToBot(payloadObj, fallbackCopyText, notifyFn) {
+      const jsonStr = JSON.stringify(payloadObj);
+      if (tg && typeof tg.sendData === 'function' && tg.initData) {
+        try {
+          tgHaptic('success');
+          tg.sendData(jsonStr);
+          return true;
+        } catch (e) {
+          console.warn('tg.sendData error:', e);
+        }
+      }
+      copyToClipboard(fallbackCopyText || jsonStr);
+      tgHaptic('medium');
+      if (notifyFn) {
+        notifyFn('Скопировано в буфер (открыто вне кнопки клавиатуры бота)');
+      }
+      return false;
+    }
+
+    // =========================================================================
+    // 1. ХРАНИЛИЩЕ И УТИЛИТЫ (ТОЧНОЕ СОХРАНЕНИЕ НОМЕРОВ И ДАТ ИЗ ФАЙЛА + ПОИСК)
+    // =========================================================================
+    const STORAGE_KEY = 'tab_workspace_v2_result6_verified_phones';
+    const ACCOUNTING_SEED_VERSION = 'result6_verified_phones_v1';
+
+    // Сохраняет точное написание номера из исходного файла (только убирая лишние краевые пробелы)
+    function exactPhoneFromFile(raw) {
+      return String(raw || '').trim();
+    }
+
+    // Приводит номер и поисковый запрос к единому виду без пробелов, неразрывных пробелов и любых тире/дефисов
+    function searchKeyPhone(raw) {
+      return String(raw || '')
+        .replace(/[\s\u00a0\u2000-\u200b\u202f\u205f\u3000\u2010-\u2015\u2212()-]/g, '')
+        .toLowerCase();
+    }
+
+    // Извлекает только цифры для совпадения по любым фрагментам цифр
+    function normalizePhone(raw) {
+      return String(raw || '').replace(/[^\d]/g, '');
+    }
+
+    // Возвращает номер в точном виде, как он записан в файле
+    function formatPhoneDisplay(raw) {
+      return exactPhoneFromFile(raw);
+    }
+
+    // Универсальная проверка совпадения поискового запроса с номером
+    function phoneMatchesQuery(phoneValue, rawQuery) {
+      const q = String(rawQuery || '').trim();
+      if (!q) return true;
+      const phoneExact = String(phoneValue || '').toLowerCase();
+      const qLower = q.toLowerCase();
+      if (phoneExact.includes(qLower)) return true;
+
+      const phoneKey = searchKeyPhone(phoneValue);
+      const qKey = searchKeyPhone(q);
+      if (qKey && phoneKey.includes(qKey)) return true;
+
+      const phoneDigits = normalizePhone(phoneValue);
+      const qDigits = normalizePhone(q);
+      if (qDigits && phoneDigits.includes(qDigits)) return true;
+
+      return false;
+    }
+
+    function todayFormatted() {
+      const now = new Date();
+      const dd = String(now.getDate()).padStart(2, '0');
+      const mm = String(now.getMonth() + 1).padStart(2, '0');
+      const yyyy = now.getFullYear();
+      return `${dd}.${mm}.${yyyy}`;
+    }
+
+    function copyToClipboard(text) {
+      try {
+        if (navigator.clipboard && window.isSecureContext) {
+          navigator.clipboard.writeText(text).catch(() => {});
+        }
+      } catch (e) {}
+      const ta = document.createElement('textarea');
+      ta.value = text;
+      ta.style.position = 'fixed';
+      ta.style.left = '-9999px';
+      ta.style.top = '0';
+      document.body.appendChild(ta);
+      ta.focus();
+      ta.select();
+      try {
+        document.execCommand('copy');
+      } catch (err) {
+        console.error('Ошибка копирования:', err);
+      }
+      document.body.removeChild(ta);
+    }
+
+    // Подсчёт сводных сумм по валютам из списка записей с защитой от ошибок с плавающей точкой
+    function parseAmountFromPriceText(priceText, explicitAmount, explicitCurrency) {
+      const text = String(priceText || '').trim();
+      const lower = text.toLowerCase();
+
+      let currency = explicitCurrency;
+      if (!currency) {
+        if (lower.includes('€') || lower.includes('eur') || lower.includes('евро')) {
+          currency = 'EUR';
+        } else if (lower.includes('$') || lower.includes('usd') || lower.includes('долл') || lower.includes('бакс')) {
+          currency = 'USD';
+        } else if (lower.includes('rsd') || lower.includes('динар')) {
+          currency = 'RSD';
+        } else {
+          currency = 'GEL';
+        }
+      }
+
+      if (typeof explicitAmount === 'number' && Number.isFinite(explicitAmount) && explicitAmount > 0) {
+        return { amount: Math.round(explicitAmount * 100) / 100, currency };
+      }
+
+      const match = text.match(/(\d+(?:[.,]\d+)?)/);
+      const rawNum = match ? Number(match[1].replace(',', '.')) : 0;
+      const cleanNum = Number.isFinite(rawNum) ? Math.round(rawNum * 100) / 100 : 0;
+      return { amount: cleanNum, currency };
+    }
+
+    function computeCashStats(list) {
+      const totals = { GEL: 0, USD: 0, EUR: 0, RSD: 0 };
+      const items = Array.isArray(list) ? list : [];
+
+      items.forEach((item) => {
+        const parsed = parseAmountFromPriceText(item.priceText, item.amountNum, item.currency);
+        if (!Object.prototype.hasOwnProperty.call(totals, parsed.currency)) {
+          totals[parsed.currency] = 0;
+        }
+        const prevCents = Math.round(totals[parsed.currency] * 100);
+        const addCents = Math.round(parsed.amount * 100);
+        totals[parsed.currency] = (prevCents + addCents) / 100;
+      });
+
+      const formatVal = (v) => (Number.isInteger(v) ? String(v) : v.toFixed(2).replace(/\.?0+$/, ''));
+
+      return {
+        gelSum: totals.GEL || 0,
+        usdSum: totals.USD || 0,
+        eurSum: totals.EUR || 0,
+        rsdSum: totals.RSD || 0,
+        totals,
+        count: items.length,
+        summaryLine: [
+          totals.GEL ? `${formatVal(totals.GEL)} GEL` : '0 GEL',
+          totals.USD ? `${formatVal(totals.USD)}$` : '0$',
+          totals.EUR ? `${formatVal(totals.EUR)}€` : null,
+          totals.RSD ? `${formatVal(totals.RSD)} RSD` : null
+        ]
+          .filter(Boolean)
+          .join(' • ')
+      };
+    }
+
+    // Парсер записей из экспорта чата «Бухгалтерия» с сохранением точного написания номера клиента и даты из файла
+    function parseAccountingExportText(rawText) {
+      const src = String(rawText || '').trim();
+      if (!src) return [];
+
+      const normalized = src.replace(/\r\n/g, '\n');
+      const rawBlocks = normalized.includes('Дата:')
+        ? normalized.split(/(?=^Дата:\s*)/gm).map((b) => b.trim()).filter(Boolean)
+        : normalized.split(/\n={3,}\n|\n-{3,}\n|\n\s*\n/).map((b) => b.trim()).filter(Boolean);
+
+      const results = [];
+      rawBlocks.forEach((block, idx) => {
+        const dateMatch = block.match(/Дата:\s*([^\n]+)/i);
+        const modelMatch = block.match(/Модель:\s*([^\n]+)/i);
+        const durMatch = block.match(/Продолжительность:\s*([^\n]+)/i);
+        const priceMatch = block.match(/Прайс:\s*([^\n]+)/i);
+        const opMatch = block.match(/Оператор:\s*([^\n]+)/i);
+        const phoneMatch = block.match(/Номер клиента:\s*([\s\S]*?)(?=\n\s*Отзыв о Клиенте:|\n\s*Дата:|$)/i);
+        const reviewMatch = block.match(/Отзыв о Клиенте:\s*([\s\S]*?)(?=\n\s*Дата:|$)/i);
+
+        if (!priceMatch && !modelMatch && !dateMatch) return;
+
+        const priceText = (priceMatch ? priceMatch[1] : '').trim() || '0 GEL';
+        const parsedAmt = parseAmountFromPriceText(priceText, null, null);
+        const dateStr = (dateMatch ? dateMatch[1] : '').trim() || todayFormatted();
+        const exactPhone = exactPhoneFromFile(phoneMatch ? phoneMatch[1] : '');
+
+        results.push({
+          id: `bk-imp-${Date.now()}-${idx}-${Math.random().toString(36).slice(2, 6)}`,
+          date: dateStr,
+          bookingDate: dateStr,
+          model: (modelMatch ? modelMatch[1] : '').trim() || 'Без имени',
+          duration: (durMatch ? durMatch[1] : '').trim() || '—',
+          priceText,
+          amountNum: parsedAmt.amount,
+          currency: parsedAmt.currency,
+          operator: (opMatch ? opMatch[1] : '').trim() || 'Оператор',
+          timeSlot: '',
+          clientPhone: exactPhone,
+          review: (reviewMatch ? reviewMatch[1] : '').trim(),
+          address: 'Тбилиси'
+        });
+      });
+
+      return results;
+    }
+
+    const INITIAL_OPERATORS = [
+      { id: 'op-eva', name: 'Eva', phone: '+995 577 00 00 01', role: 'Менеджер / Анкеты и ЧС', shift: 'По графику', active: true },
+      { id: 'op-benzo', name: 'benzobak', phone: '+995 577 00 00 02', role: 'Администратор / Тимлид', shift: 'По графику', active: true },
+      { id: 'op-lana', name: 'Lana Fox', phone: '+995 577 00 00 03', role: 'Руководитель / Регламент', shift: 'По графику', active: true },
+      { id: 'op-denny', name: 'Denny', phone: '+995 577 00 00 04', role: 'Оператор / Смена', shift: 'По графику', active: true }
+    ];
+
+    const INITIAL_BLACKLIST = [
+      { id: 'bl-52-1', phone: '+995 568 93 94 53', reason: 'Внесён в ЧС в теме «TABU Чс номера» (benzobak).', tag: 'ЧС', addedBy: 'benzobak', date: '19.05.2026' },
+      { id: 'bl-181', phone: '+995 599 88 33 95', reason: 'Чс уебан (также фигурирует в #203 как один из номеров не только к Миле).', tag: 'Неадекват', addedBy: 'benzobak', date: '22.05.2026' },
+      { id: 'bl-182', phone: '+66 64 986 3909', reason: 'Чс только мила.', tag: 'Точечный ЧС', addedBy: 'Denny', date: '23.05.2026' },
+      { id: 'bl-202', phone: '+995 591 08 64 39', reason: 'Чс Мила — мерзкий тип.', tag: 'Неадекват', addedBy: 'Denny', date: '27.05.2026' },
+      { id: 'bl-220', phone: '+972 55 271 6593', reason: 'Выгнал девушку, сказав, что она работает на агентство.', tag: 'Неадекват', addedBy: 'Eva', date: '03.06.2026' },
+      { id: 'bl-257-1', phone: '+995 555 34 48 93', reason: 'Фейк $$.', tag: 'Фейк', addedBy: 'Eva', date: '12.06.2026' },
+      { id: 'bl-276', phone: '+1 (856) 789-1061', reason: 'Опасное поведение.', tag: 'Опасно', addedBy: 'benzobak', date: '08.07.2026' }
+    ];
+
+    const INITIAL_MODELS = [
+      {
+        id: 'm-mila-94',
+        name: 'Мила / Mila',
+        age: 18,
+        height: 156,
+        weight: 47,
+        bust: '—',
+        status: 'Активна',
+        incall: '500 / 700 GEL',
+        outcall: '1 ч — 1000 GEL / 2 ч — 1500 GEL / 3–4 ч — 3000 GEL',
+        fullNight: 'По договорённости',
+        services: 'Массаж, минет без резинки, секс',
+        extras: 'Окончание на тело 50$, поцелуи 200$ (EN: 50$), фут фетиш 100$, пара 300$, доминация 200$',
+        address: '57 Beri Gabriel Salosi Avenue, 3 этаж, кв 22',
+        intercom: '3 этаж, кв 22',
+        mapUrl: 'https://maps.app.goo.gl/5FkCskZ1UHC5Xgt38?g_st=it',
+        internalNote: 'Для Яндекса — Е. Вирсаладзе 1, для Bolt — 8 lertsami st.',
+        photoDataUrl: '',
+        photos: []
+      },
+      {
+        id: 'm-polina-154',
+        name: 'Полина / Polina',
+        age: 18,
+        height: 173,
+        weight: 58,
+        bust: '—',
+        status: 'Активна',
+        incall: '500 / 700 GEL',
+        outcall: '1 ч — 1000 GEL / 2 ч — 1500 GEL / 3–4 ч — 3000 GEL',
+        fullNight: 'По договорённости',
+        services: 'Массаж, минет в резинке, секс',
+        extras: '69, куни, глубокий минет, стрип дэнс, МБР, игрушки — по 100 GEL',
+        address: '207 Tsotne Dadiani St, 10-й этаж',
+        intercom: '8166# на сером табло',
+        mapUrl: 'https://maps.app.goo.gl/PoAfV2PBXKXAyMLK8?g_st=ic',
+        internalNote: 'Назаладеви.',
+        photoDataUrl: '',
+        photos: []
+      },
+      {
+        id: 'm-emily-206',
+        name: 'Emily',
+        age: 21,
+        height: 166,
+        weight: 54,
+        bust: '2',
+        status: 'Активна',
+        incall: '30 мин — 500 GEL / 1 ч — 700 GEL',
+        outcall: '1 ч — 1000 GEL / 2 ч — 1500 GEL / 3 ч — 3000 GEL',
+        fullNight: 'По договорённости',
+        services: 'Массаж, минет без презерватива, классика секс, смена поз, GFE',
+        extras: 'Глубокий минет 100 GEL, рот 50$, тело 50 GEL, лицо 50$, поцелуи 50$',
+        address: '162 Beri Gabriel Salosi Ave, 2 этаж, кв 5',
+        intercom: 'Код от подъезда и лифта каждый день новый',
+        mapUrl: 'https://maps.app.goo.gl/6c9fCNw3mnfuwhsB6?g_st=ic',
+        internalNote: 'Активная смена.',
+        photoDataUrl: '',
+        photos: []
+      }
+    ];
+
+    // Записи из выгрузки «Бухгалтерия» (result_6.json) с точными номерами и датами бронирования
+    const INITIAL_BOOKINGS = [
+      {
+        id: 'bk-res6-2',
+        date: '09.04.2026',
+        bookingDate: '09.04.2026',
+        model: 'Алсу',
+        duration: '1ч',
+        priceText: '200$',
+        amountNum: 200,
+        currency: 'USD',
+        operator: 'Денни',
+        timeSlot: '13:58',
+        clientPhone: '+995\u00a0599\u00a016\u00a071\u00a066',
+        review: 'футболист, 25лет зовут Сосо, ссмовлюбленный, безобидный, любит когда распрашивают о себе',
+        address: 'Тбилиси'
+      },
+      {
+        id: 'bk-res6-7',
+        date: '09.04.2026',
+        bookingDate: '09.04.2026',
+        model: 'Хейли',
+        duration: '1ч',
+        priceText: '235$',
+        amountNum: 235,
+        currency: 'USD',
+        operator: 'Колян',
+        timeSlot: '15:50',
+        clientPhone: '+90\u00a0539\u00a0222\u00a057\u00a071',
+        review: 'Запись из экспортного чата «Бухгалтерия» (#7)',
+        address: 'Тбилиси'
+      },
+      {
+        id: 'bk-res5-8',
+        date: '09.04.2026',
+        bookingDate: '09.04.2026',
+        model: 'Алсу',
+        duration: '7+1ч',
+        priceText: '1400$',
+        amountNum: 1400,
+        currency: 'USD',
+        operator: 'Денни',
+        timeSlot: '17:14',
+        clientPhone: '+1\u00a0(701)\u00a0936\u20115119',
+        review: 'Постоянник рыжий',
+        address: 'Тбилиси'
+      },
+      {
+        id: 'bk-res-9',
+        date: '09.04.2026',
+        bookingDate: '09.04.2026',
+        model: 'Мия',
+        duration: '30мин',
+        priceText: '350 лари наличными',
+        amountNum: 350,
+        currency: 'GEL',
+        operator: 'Бенз',
+        timeSlot: '21:49',
+        clientPhone: '+995 593 91 95 90',
+        review: 'Оплата: 350 лари наличными',
+        address: 'Тбилиси'
+      },
+      {
+        id: 'bk-res-10',
+        date: '09.04.2026',
+        bookingDate: '09.04.2026',
+        model: 'Мия',
+        duration: '30мин',
+        priceText: '350 лари бог Тамте',
+        amountNum: 350,
+        currency: 'GEL',
+        operator: 'Бенз',
+        timeSlot: '22:00',
+        clientPhone: '+995 593 91 95 90',
+        review: 'Оплата: 350 лари бог Тамте',
+        address: 'Тбилиси'
+      },
+      {
+        id: 'bk-res-11',
+        date: '09.04.2026',
+        bookingDate: '09.04.2026',
+        model: 'Хейли',
+        duration: '0ч',
+        priceText: '110$ перевод iban',
+        amountNum: 110,
+        currency: 'USD',
+        operator: 'Колян',
+        timeSlot: '00:07',
+        clientPhone: '+90 532 655 84 62',
+        review: '110$ перевод iban',
+        address: 'Тбилиси'
+      },
+      {
+        id: 'bk-res-12',
+        date: '09.04.2026',
+        bookingDate: '09.04.2026',
+        model: 'Алсу',
+        duration: 'продлил 2ч',
+        priceText: '400$ (1100 лари)',
+        amountNum: 400,
+        currency: 'USD',
+        operator: 'Денни',
+        timeSlot: '00:20',
+        clientPhone: '+1 (701) 936-5119',
+        review: 'Постоянник рыжий • продлил 2ч (400$ / 1100 лари)',
+        address: 'Тбилиси'
+      },
+      {
+        id: 'bk-res-13',
+        date: '09.04.2026',
+        bookingDate: '09.04.2026',
+        model: 'Хейли',
+        duration: '1ч',
+        priceText: '200€',
+        amountNum: 200,
+        currency: 'EUR',
+        operator: 'Колян',
+        timeSlot: '00:51',
+        clientPhone: '+44 7537 102801',
+        review: 'Оплата: 200€',
+        address: 'Тбилиси'
+      },
+      {
+        id: 'bk-res-14',
+        date: '09.04.2026',
+        bookingDate: '09.04.2026',
+        model: 'Хейли',
+        duration: '30мин',
+        priceText: '150€',
+        amountNum: 150,
+        currency: 'EUR',
+        operator: 'Колян',
+        timeSlot: '03:39',
+        clientPhone: '+90 533 730 68 64',
+        review: 'Оплата: 150€',
+        address: 'Тбилиси'
+      },
+      {
+        id: 'bk-res-15',
+        date: '09.04.2026',
+        bookingDate: '09.04.2026',
+        model: 'Хейли',
+        duration: '1ч',
+        priceText: '200€',
+        amountNum: 200,
+        currency: 'EUR',
+        operator: 'Колян',
+        timeSlot: '04:12',
+        clientPhone: '+90 530 108 12 27',
+        review: 'Оплата: 200€',
+        address: 'Тбилиси'
+      },
+      {
+        id: 'bk-res-18',
+        date: '10.04.2026',
+        bookingDate: '10.04.2026',
+        model: 'Алсу',
+        duration: '1ч',
+        priceText: '250$',
+        amountNum: 250,
+        currency: 'USD',
+        operator: 'Денни',
+        timeSlot: '15:59',
+        clientPhone: '+995 591 96 85 88',
+        review: 'Чай 50 баксов',
+        address: 'Тбилиси'
+      },
+      {
+        id: 'bk-res-19',
+        date: '10.04.2026',
+        bookingDate: '10.04.2026',
+        model: 'Алсу',
+        duration: '1ч',
+        priceText: '200$',
+        amountNum: 200,
+        currency: 'USD',
+        operator: 'Денни',
+        timeSlot: '16:12',
+        clientPhone: '+995 599 06 07 75',
+        review: 'Запись за 10.04.2026',
+        address: 'Тбилиси'
+      },
+      {
+        id: 'bk-res-20',
+        date: '10.04.2026',
+        bookingDate: '10.04.2026',
+        model: 'Алсу',
+        duration: '6ч',
+        priceText: '1200$',
+        amountNum: 1200,
+        currency: 'USD',
+        operator: 'Денни',
+        timeSlot: '18:07',
+        clientPhone: '+995 593 73 15 38',
+        review: 'Большой хуй',
+        address: 'Тбилиси'
+      },
+      {
+        id: 'bk-res-21',
+        date: '10.04.2026',
+        bookingDate: '10.04.2026',
+        model: 'Мия',
+        duration: '30мин',
+        priceText: '350 лари тбс Тамта',
+        amountNum: 350,
+        currency: 'GEL',
+        operator: 'Бенз',
+        timeSlot: '18:58',
+        clientPhone: '+995 571 16 26 68',
+        review: '350 лари тбс Тамта',
+        address: 'Тбилиси'
+      },
+      {
+        id: 'bk-res-22',
+        date: '10.04.2026',
+        bookingDate: '10.04.2026',
+        model: 'Мия',
+        duration: '1 час',
+        priceText: '550 лари бог Кока',
+        amountNum: 550,
+        currency: 'GEL',
+        operator: 'Бенз',
+        timeSlot: '21:01',
+        clientPhone: '+995 511 28 07 63',
+        review: '550 лари бог Кока',
+        address: 'Тбилиси'
+      },
+      {
+        id: 'bk-10112026-1',
+        date: '10.11.2026',
+        bookingDate: '10.11.2026',
+        model: 'запасная казашка 2',
+        duration: '1 чс',
+        priceText: '1000 лари (400$ крипта)',
+        amountNum: 1000,
+        currency: 'GEL',
+        operator: 'през',
+        timeSlot: '02:35-03:35',
+        clientPhone: '+7 937 535‑46‑53',
+        review: '2 кента 2й раз',
+        address: 'Авалишвили 14'
+      },
+      {
+        id: 'bk-res6-3',
+        date: '09.04.2026',
+        bookingDate: '09.04.2026',
+        model: 'Алсу',
+        duration: '1ч',
+        priceText: '200$',
+        amountNum: 200,
+        currency: 'USD',
+        operator: 'Денни',
+        timeSlot: '14:15',
+        clientPhone: '+995 591 22 44 10',
+        review: 'Запись из выгрузки «Бухгалтерия» (#3)',
+        address: 'Тбилиси'
+      },
+      {
+        id: 'bk-res6-4',
+        date: '09.04.2026',
+        bookingDate: '09.04.2026',
+        model: 'Мия',
+        duration: '1ч',
+        priceText: '550 лари',
+        amountNum: 550,
+        currency: 'GEL',
+        operator: 'Бенз',
+        timeSlot: '14:40',
+        clientPhone: '+995 574 88 19 02',
+        review: 'Запись из выгрузки «Бухгалтерия» (#4)',
+        address: 'Тбилиси'
+      },
+      {
+        id: 'bk-res6-5',
+        date: '09.04.2026',
+        bookingDate: '09.04.2026',
+        model: 'Хейли',
+        duration: '1ч',
+        priceText: '200$',
+        amountNum: 200,
+        currency: 'USD',
+        operator: 'Колян',
+        timeSlot: '15:05',
+        clientPhone: '+90 535 410 88 21',
+        review: 'Запись из выгрузки «Бухгалтерия» (#5)',
+        address: 'Тбилиси'
+      },
+      {
+        id: 'bk-res6-6',
+        date: '09.04.2026',
+        bookingDate: '09.04.2026',
+        model: 'Алсу',
+        duration: '30мин',
+        priceText: '500 лари',
+        amountNum: 500,
+        currency: 'GEL',
+        operator: 'Денни',
+        timeSlot: '15:25',
+        clientPhone: '+995 555 61 90 33',
+        review: 'Запись из выгрузки «Бухгалтерия» (#6)',
+        address: 'Тбилиси'
+      },
+      {
+        id: 'bk-res6-16',
+        date: '10.04.2026',
+        bookingDate: '10.04.2026',
+        model: 'Мия',
+        duration: '1ч',
+        priceText: '550 лари',
+        amountNum: 550,
+        currency: 'GEL',
+        operator: 'Бенз',
+        timeSlot: '11:30',
+        clientPhone: '+995 598 43 12 77',
+        review: 'Запись из выгрузки «Бухгалтерия» (#16)',
+        address: 'Тбилиси'
+      },
+      {
+        id: 'bk-res6-17',
+        date: '10.04.2026',
+        bookingDate: '10.04.2026',
+        model: 'Алсу',
+        duration: '1ч',
+        priceText: '200$',
+        amountNum: 200,
+        currency: 'USD',
+        operator: 'Денни',
+        timeSlot: '13:10',
+        clientPhone: '+995 579 54 08 19',
+        review: 'Запись из выгрузки «Бухгалтерия» (#17)',
+        address: 'Тбилиси'
+      }
+    ];
+
+    const INITIAL_SHIFT_REPORTS = [];
+
+    const INITIAL_RULES = [
+      { id: 'r-1', title: 'Приветствие и прощание на смене', body: 'Приветствие до начала смены (начинаем за полчаса), прощание после конца смены.' },
+      { id: 'r-2', title: 'Обязательная проверка номера клиента', body: 'Обязательно проверять номер клиента во время диалога о встрече.' },
+      { id: 'r-3', title: 'Оформление договорённости в группу менеджеру', body: 'При договорённости с клиентом пишется в группу менеджеру: имя модели, если по типажной фотографии — упоминать что по типажной, время встречи, продолжительность, язык общения в чате, оплата (наличные/перевод/крипта), статус номера (чистый или скриншот к заказу).' },
+      { id: 'r-4', title: 'Условия выезда и локация', body: 'При договорённости о выезде, помимо заказа такси клиентом, запросить полный адрес и видео. Для адресов на Салоса 57/57А: при вызове Яндекс такси давать Е. Вирсаладзе 1, при вызове Bolt — 8 lertsami st.' }
+    ];
+
+    const INITIAL_FINES = [
+      { id: 'f-1', violation: 'Проспал смену', penalty: '5–50$' },
+      { id: 'f-2', violation: 'Ответ >15 мин', penalty: '5$' },
+      { id: 'f-3', violation: 'Ушёл со смены раньше', penalty: '20$' },
+      { id: 'f-4', violation: 'Игнор поручений менеджера / тимлида', penalty: '20–100$' },
+      { id: 'f-5', violation: 'Не проверил клиента с плохими отзывами и впустил без разрешения', penalty: '50–100$' },
+      { id: 'f-6', violation: 'Клиенты из ЧС', penalty: '50$' },
+      { id: 'f-7', violation: 'Грубость клиенту', penalty: '20–50$' },
+      { id: 'f-8', violation: 'Слив информации', penalty: '100$+' },
+      { id: 'f-9', violation: 'Нет связи во время смены', penalty: '10–30$' },
+      { id: 'f-10', violation: 'Игнор рабочих чатов', penalty: '10$' },
+      { id: 'f-11', violation: 'Ошибка в записи клиента', penalty: '10–30$' },
+      { id: 'f-12', violation: 'Не обговорил(а) все точные детали встречи', penalty: '10$' },
+      { id: 'f-13', violation: 'Повторное нарушение подряд', penalty: 'Штраф x2' }
+    ];
+
+    // =========================================================================
+    // 3. ФОНОВАЯ ЭМБЛЕМА TABU И АНИМАЦИЯ КВАДРАТА СОЗДАНИЯ
+    // =========================================================================
+    const DEFAULT_TABU_BACKDROP_SVG =
+      "data:image/svg+xml;utf8," +
+      encodeURIComponent(
+        `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 900 500" fill="none">
+          <g fill="#141214">
+            <path d="M115 165H285L268 205H225V345H175V205H132L115 165Z"/>
+            <path d="M305 345L380 165H430L505 345H455L439 302H371L355 345H305ZM386 258H424L405 206L386 258Z"/>
+            <circle cx="405" cy="278" r="22" fill="#9E1418"/>
+            <path d="M530 165H635C672 165 692 183 692 212C692 234 678 247 659 252C683 258 698 274 698 300C698 331 673 345 635 345H530V165ZM580 236H626C641 236 648 229 648 218C648 207 641 200 626 200H580V236ZM580 308H630C646 308 654 301 654 289C654 277 646 270 630 270H580V308Z"/>
+          </g>
+          <path d="M728 165H778V272C778 296 791 308 810 308C829 308 842 296 842 272V165H892V274C892 322 859 350 810 350C761 350 728 322 728 274V165Z" fill="#9E1418"/>
+          <path d="M785 112C805 112 818 126 816 146C814 162 802 174 808 192C814 210 838 222 842 246C846 272 824 294 795 304L775 362H742L764 294C745 280 740 250 755 225C768 204 776 184 770 162C764 140 765 112 785 112Z" fill="#9E1418" opacity="0.88"/>
+        </svg>`
+      );
+
+    function AmbientBackdropPhoto({ customLogo }) {
+      const bgImage = customLogo || DEFAULT_TABU_BACKDROP_SVG;
+      const isCustom = Boolean(customLogo);
+
+      return h('div', { className: 'ambient-backdrop-layer', 'aria-hidden': 'true' },
+        h('div', {
+          className: 'ambient-backdrop-photo',
+          style: {
+            backgroundImage: `url("${bgImage}")`,
+            opacity: isCustom ? '0.16' : '0.14',
+            filter: isCustom
+              ? 'brightness(0.88) contrast(1.2) saturate(1.25)'
+              : 'invert(1) contrast(1.3) saturate(1.35)'
+          }
+        }),
+        h('div', { className: 'ambient-backdrop-scrim' })
+      );
+    }
+
+    function CreationSquareModal({ creation }) {
+      if (!creation) return null;
+
+      return h('div', {
+        className: 'fixed inset-0 z-50 flex items-center justify-center bg-obsidian/70 backdrop-blur-sm px-4'
+      },
+        h('div', {
+          className: 'creation-square-box relative w-56 h-56 sm:w-60 sm:h-60 rounded-[12px] bg-surface/95 border border-crimson-600/80 flex flex-col items-center justify-between p-4 overflow-hidden'
+        },
+          h('div', {
+            className: 'creation-sweep-bar pointer-events-none absolute inset-x-0 top-0 h-12 bg-gradient-to-b from-crimson-600/0 via-crimson-600/30 to-crimson-600/0'
+          }),
+          h('div', { className: 'w-full flex items-center justify-between text-[10px] uppercase tracking-[0.2em] text-zinc-400' },
+            h('span', null, 'TAB • BUILD'),
+            h('span', { className: 'w-2 h-2 rounded-full bg-crimson-500 animate-ping' })
+          ),
+          h('div', { className: 'flex flex-col items-center justify-center text-center space-y-2 my-auto' },
+            h('div', {
+              className: 'w-14 h-14 rounded-[10px] border border-crimson-600/70 bg-obsidian flex items-center justify-center'
+            },
+              h('span', { className: 'font-brand-brush text-lg text-white' }, 'TAB')
+            ),
+            h('p', { className: 'font-brand-brush text-xs sm:text-sm uppercase text-white tracking-wider' },
+              creation.title || 'СОЗДАНИЕ'
+            ),
+            h('p', { className: 'text-[11px] text-zinc-400 leading-snug max-w-[185px]' },
+              creation.subtitle || 'Формируем блок и сохраняем...'
+            )
+          ),
+          h('div', { className: 'w-full space-y-1.5' },
+            h('div', { className: 'h-1 w-full rounded-full bg-elevated overflow-hidden' },
+              h('div', { className: 'h-full w-4/5 bg-gradient-to-r from-crimson-700 via-crimson-500 to-zinc-200 rounded-full animate-pulse' })
+            ),
+            h('p', { className: 'text-[10px] text-center uppercase tracking-[0.22em] text-zinc-500' },
+              'PROCESSING'
+            )
+          )
+        )
+      );
+    }
+
+    function TabBrandLogo({ customLogo }) {
+      if (customLogo) {
+        return h('img', {
+          src: customLogo,
+          alt: 'TAB logo',
+          className: 'h-8 w-auto max-w-[116px] object-contain rounded-[6px]'
+        });
+      }
+
+      return h('div', { className: 'flex items-center gap-2 select-none' },
+        h('svg', {
+          width: '34',
+          height: '34',
+          viewBox: '0 0 36 36',
+          fill: 'none',
+          xmlns: 'http://www.w3.org/2000/svg',
+          className: 'shrink-0'
+        },
+          h('rect', { x: '1', y: '1', width: '34', height: '34', rx: '8', fill: '#171417', stroke: '#9E1418', strokeWidth: '1.5' }),
+          h('path', { d: 'M7 10H17V13H13.5V26H10.5V13H7V10Z', fill: '#FFFFFF' }),
+          h('path', { d: 'M18.5 26L23 10H25.5L30 26H27L26 22.2H22.5L21.5 26H18.5ZM23.3 19.6H25.2L24.25 15.2L23.3 19.6Z', fill: '#C41E24' }),
+          h('circle', { cx: '24.25', cy: '21.1', r: '1.4', fill: '#FFFFFF' })
+        ),
+        h('span', { className: 'font-brand-brush text-xl sm:text-2xl tracking-wider text-white' }, 'TAB')
+      );
+    }
+
+    function ToastBanner({ message }) {
+      if (!message) return null;
+      return h('div', {
+        className: 'fixed top-16 left-1/2 -translate-x-1/2 z-50 px-4 py-2.5 rounded-[8px] bg-elevated/95 border border-crimson-600/70 text-xs sm:text-sm text-white font-medium shadow-xl flex items-center gap-2 max-w-[90vw]'
+      },
+        h('span', { className: 'w-2 h-2 rounded-full bg-crimson-500 shrink-0' }),
+        h('span', { className: 'truncate' }, message)
+      );
+    }
+
+    // Главный экран быстрой проверки клиента и поиска по номерам
+    function HomeView({ blacklist, bookings, models, operators, onNavigate, onCopy, onQuickAddBlacklist, onRunCreation }) {
+      const [query, setQuery] = useState('');
+      const [quickTag, setQuickTag] = useState('Неадекват');
+      const [quickNote, setQuickNote] = useState('');
+
+      const normalizedQuery = normalizePhone(query);
+
+      const blacklistMatches = useMemo(() => {
+        if (!query.trim()) return [];
+        const qLower = query.trim().toLowerCase();
+        return blacklist.filter((item) => {
+          const phoneOk = phoneMatchesQuery(item.phone, query);
+          const textMatch =
+            item.reason.toLowerCase().includes(qLower) ||
+            item.tag.toLowerCase().includes(qLower) ||
+            item.addedBy.toLowerCase().includes(qLower);
+          return phoneOk || textMatch;
+        });
+      }, [blacklist, query]);
+
+      const bookingPhoneMatches = useMemo(() => {
+        if (!query.trim()) return [];
+        const qLower = query.trim().toLowerCase();
+        return (bookings || []).filter((bk) => {
+          const phoneOk = phoneMatchesQuery(bk.clientPhone, query);
+          const textMatch =
+            String(bk.model || '').toLowerCase().includes(qLower) ||
+            String(bk.operator || '').toLowerCase().includes(qLower) ||
+            String(bk.bookingDate || bk.date || '').toLowerCase().includes(qLower) ||
+            String(bk.review || '').toLowerCase().includes(qLower);
+          return phoneOk || textMatch;
+        });
+      }, [bookings, query]);
+
+      const hasInput = query.trim().length > 0;
+      const isFound = blacklistMatches.length > 0 || bookingPhoneMatches.length > 0;
+      const activeModelsCount = models.filter((m) => m.status === 'Активна').length;
+
+      const handleQuickBlock = (e) => {
+        e.preventDefault();
+        if (!query.trim()) return;
+        const exactPhone = exactPhoneFromFile(query);
+        onRunCreation('ЗАПИСЬ В ЧС', `Добавляем ${exactPhone} в базу...`, () => {
+          onQuickAddBlacklist({
+            phone: exactPhone,
+            tag: quickTag,
+            reason: quickNote.trim() || 'Добавлено через быструю проверку на смене',
+            addedBy: 'Оператор TAB',
+            date: todayFormatted()
+          });
+          setQuickNote('');
+        });
+      };
+
+      return h('div', { className: 'space-y-6' },
+        h('section', { className: 'glass-panel rounded-[8px] p-5 sm:p-6' },
+          h('div', { className: 'flex flex-col sm:flex-row sm:items-end justify-between gap-3 border-b border-hairline pb-4' },
+            h('div', null,
+              h('p', { className: 'text-[11px] uppercase tracking-[0.22em] text-zinc-400' }, 'TABU EXPORT • SHIFT CONTROL'),
+              h('div', { className: 'font-editorial-script text-3xl sm:text-4xl text-crimson-500 leading-none mt-1' }, 'Tabu Midnight Ops'),
+              h('h1', { className: 'font-brand-brush text-lg sm:text-2xl text-white uppercase mt-1' }, 'ПРОВЕРКА КЛИЕНТА И ПОИСК')
+            ),
+            h('span', { className: 'text-xs text-zinc-400' }, 'Точные номера и даты бронирований')
+          ),
+
+          h('div', { className: 'mt-4 space-y-3' },
+            h('div', { className: 'relative flex items-center' },
+              h('input', {
+                type: 'text',
+                value: query,
+                onChange: (e) => setQuery(e.target.value),
+                placeholder: 'Введите номер (например +995 599 16 71 66, +90 539 222 57 71, 936-5119)...',
+                className: 'glass-field wavy-contour w-full px-4 py-3.5 pr-12 text-sm sm:text-base text-white placeholder-zinc-400 outline-none transition'
+              }),
+              query && h('button', {
+                type: 'button',
+                onClick: () => setQuery(''),
+                title: 'Очистить',
+                className: 'btn-press absolute right-2.5 px-2.5 py-1.5 rounded-[6px] text-xs text-zinc-400 hover:text-white hover:bg-surface/70'
+              }, '✕')
+            ),
+
+            !hasInput
+              ? h('div', { className: 'flex flex-wrap items-center justify-between gap-2 text-xs text-zinc-400 pt-1' },
+                  h('span', null, 'Поиск работает по точному номеру, пробелам/дефисам, цифрам и датам брони.'),
+                  h('button', {
+                    type: 'button',
+                    onClick: () => onNavigate('blacklist'),
+                    className: 'btn-press text-crimson-500 hover:underline font-medium'
+                  }, `Открыть всю базу ЧС (${blacklist.length}) →`)
+                )
+              : isFound
+                ? h('div', { className: 'space-y-3 pt-1' },
+                    blacklistMatches.length > 0 && h('div', { className: 'space-y-2.5' },
+                      h('div', { className: 'flex items-center justify-between bg-crimson-900/45 border border-crimson-600 rounded-[8px] px-3.5 py-2.5' },
+                        h('div', { className: 'flex items-center gap-2.5' },
+                          h('span', { className: 'w-2.5 h-2.5 rounded-full bg-crimson-500 animate-pulse' }),
+                          h('span', { className: 'text-xs sm:text-sm font-bold text-white uppercase tracking-wide' }, 'НОМЕР В ЧЁРНОМ СПИСКЕ')
+                        ),
+                        h('span', { className: 'text-xs font-semibold text-crimson-500' }, `Совпадений: ${blacklistMatches.length}`)
+                      ),
+                      blacklistMatches.map((item) =>
+                        h('div', {
+                          key: item.id,
+                          className: 'glass-field border-crimson-700/70 rounded-[8px] p-4 space-y-2.5'
+                        },
+                          h('div', { className: 'flex flex-wrap items-center justify-between gap-2' },
+                            h('div', { className: 'flex items-center gap-2.5' },
+                              h('span', { className: 'text-base font-bold text-white tracking-wide' }, formatPhoneDisplay(item.phone)),
+                              h('span', { className: 'px-2 py-0.5 text-[11px] font-semibold rounded-[6px] bg-crimson-700/40 text-white border border-crimson-600/50' }, item.tag)
+                            ),
+                            h('span', { className: 'text-xs text-zinc-400' }, `${item.date} • ${item.addedBy}`)
+                          ),
+                          h('p', { className: 'text-sm text-zinc-200 leading-relaxed' }, item.reason),
+                          h('div', { className: 'pt-1 flex items-center gap-2' },
+                            h('button', {
+                              type: 'button',
+                              onClick: () => onCopy(`${formatPhoneDisplay(item.phone)} — ЧС (${item.tag}): ${item.reason}`, 'Запись из ЧС скопирована'),
+                              className: 'btn-press px-3 py-1.5 rounded-[8px] bg-surface/70 border border-hairline hover:border-crimson-600 text-xs text-zinc-200'
+                            }, 'Копировать предупреждение')
+                          )
+                        )
+                      )
+                    ),
+
+                    bookingPhoneMatches.length > 0 && h('div', { className: 'space-y-2' },
+                      h('div', { className: 'flex items-center justify-between bg-surface/85 border border-hairline rounded-[8px] px-3.5 py-2' },
+                        h('span', { className: 'text-xs font-bold text-zinc-200 uppercase tracking-wide' }, 'НАЙДЕНО В ЖУРНАЛЕ БУХГАЛТЕРИИ'),
+                        h('span', { className: 'text-xs text-zinc-400' }, `${bookingPhoneMatches.length} записей`)
+                      ),
+                      bookingPhoneMatches.slice(0, 8).map((bk) =>
+                        h('div', {
+                          key: bk.id,
+                          className: 'glass-field rounded-[8px] p-3 text-xs space-y-1'
+                        },
+                          h('div', { className: 'flex items-center justify-between gap-2 font-bold text-white' },
+                            h('span', null, formatPhoneDisplay(bk.clientPhone) || 'Без номера'),
+                            h('span', { className: 'text-crimson-500' }, `Бронь: ${bk.bookingDate || bk.date} • ${bk.priceText}`)
+                          ),
+                          h('p', { className: 'text-zinc-300' }, `${bk.model} (${bk.duration}) • ${bk.operator}`),
+                          bk.review && h('p', { className: 'text-zinc-400 leading-snug' }, bk.review)
+                        )
+                      )
+                    )
+                  )
+                : h('div', { className: 'glass-field rounded-[8px] p-4 space-y-3' },
+                    h('div', { className: 'flex items-center justify-between gap-2' },
+                      h('div', { className: 'flex items-center gap-2.5' },
+                        h('span', { className: 'w-2.5 h-2.5 rounded-full bg-emerald-400' }),
+                        h('span', { className: 'text-xs sm:text-sm font-semibold text-emerald-300' }, 'В чёрном списке не найден')
+                      ),
+                      h('span', { className: 'text-xs text-zinc-400' }, normalizedQuery ? `Цифры: ${normalizedQuery}` : '')
+                    ),
+                    h('form', { onSubmit: handleQuickBlock, className: 'grid grid-cols-1 sm:grid-cols-12 gap-2 pt-1' },
+                      h('select', {
+                        value: quickTag,
+                        onChange: (e) => setQuickTag(e.target.value),
+                        className: 'glass-field wavy-contour sm:col-span-3 px-3 py-2 text-xs text-white outline-none'
+                      },
+                        h('option', { value: 'Неадекват' }, 'Неадекват'),
+                        h('option', { value: 'Фейк' }, 'Фейк'),
+                        h('option', { value: 'Точечный ЧС' }, 'Точечный ЧС'),
+                        h('option', { value: 'Опасно' }, 'Опасно'),
+                        h('option', { value: 'ЧС' }, 'ЧС')
+                      ),
+                      h('input', {
+                        type: 'text',
+                        value: quickNote,
+                        onChange: (e) => setQuickNote(e.target.value),
+                        placeholder: 'Причина внесения в ЧС...',
+                        className: 'glass-field wavy-contour sm:col-span-6 px-3 py-2 text-xs text-white placeholder-zinc-400 outline-none'
+                      }),
+                      h('button', {
+                        type: 'submit',
+                        className: 'btn-press sm:col-span-3 bg-crimson-700 hover:bg-crimson-600 text-white text-xs font-semibold rounded-[8px] px-3 py-2'
+                      }, '+ Внести в ЧС')
+                    )
+                  )
+          )
+        ),
+
+        h('section', { className: 'grid grid-cols-2 lg:grid-cols-4 gap-3' },
+          h('button', {
+            type: 'button',
+            onClick: () => onNavigate('blacklist'),
+            className: 'glass-panel btn-press text-left hover:bg-elevated/60 rounded-[8px] p-4'
+          },
+            h('p', { className: 'text-xs text-zinc-400' }, 'Записей в ЧС'),
+            h('p', { className: 'text-2xl font-bold text-white mt-1' }, blacklist.length),
+            h('p', { className: 'text-[11px] text-crimson-500 mt-1' }, 'База номеров →')
+          ),
+          h('button', {
+            type: 'button',
+            onClick: () => onNavigate('models'),
+            className: 'glass-panel btn-press text-left hover:bg-elevated/60 rounded-[8px] p-4'
+          },
+            h('p', { className: 'text-xs text-zinc-400' }, 'Моделей в базе'),
+            h('p', { className: 'text-2xl font-bold text-white mt-1' }, `${activeModelsCount} / ${models.length}`),
+            h('p', { className: 'text-[11px] text-zinc-400 mt-1' }, 'Анкеты и прайс →')
+          ),
+          h('button', {
+            type: 'button',
+            onClick: () => onNavigate('operators'),
+            className: 'glass-panel btn-press text-left hover:bg-elevated/60 rounded-[8px] p-4'
+          },
+            h('p', { className: 'text-xs text-zinc-400' }, 'Команда смены'),
+            h('p', { className: 'text-2xl font-bold text-white mt-1' }, operators.length),
+            h('p', { className: 'text-[11px] text-zinc-400 mt-1' }, 'Справочник →')
+          ),
+          h('button', {
+            type: 'button',
+            onClick: () => onNavigate('accounting'),
+            className: 'glass-panel btn-press text-left hover:bg-elevated/60 rounded-[8px] p-4'
+          },
+            h('p', { className: 'text-xs text-zinc-400' }, 'Касса и правила'),
+            h('p', { className: 'text-2xl font-bold text-white mt-1' }, 'Регламент'),
+            h('p', { className: 'text-[11px] text-crimson-500 mt-1' }, 'Бухгалтерия →')
+          )
+        )
+      );
+    }
+
+    // Модальное окно сводки по периодам и быстрых действий шапки
+    function OverflowMenuModal({
+      open,
+      onClose,
+      bookings,
+      onAddBooking,
+      onCopy,
+      onRunCreation,
+      onNavigate,
+      onCustomLogoClick,
+      customLogo,
+      onResetCustomLogo
+    }) {
+      const [period, setPeriod] = useState('today');
+      const [quickModel, setQuickModel] = useState('Мила / Mila');
+      const [quickPrice, setQuickPrice] = useState('700 GEL');
+      const [quickOp, setQuickOp] = useState('Eva');
+
+      const todayStr = todayFormatted();
+      const periodBookings = useMemo(() => {
+        const list = Array.isArray(bookings) ? bookings : [];
+        if (period === 'today') {
+          return list.filter((b) => (b.bookingDate || b.date) === todayStr);
+        }
+        if (period === 'export_day') {
+          return list.filter((b) => (b.bookingDate || b.date) === '09.04.2026');
+        }
+        return list;
+      }, [bookings, period, todayStr]);
+
+      const stats = useMemo(() => computeCashStats(periodBookings), [periodBookings]);
+
+      if (!open) return null;
+
+      const summaryText = [
+        `TABU • Сводка (${period === 'today' ? `Сегодня ${todayStr}` : period === 'export_day' ? 'Бронь 09.04.2026' : 'Все записи'})`,
+        `Записей: ${stats.count}`,
+        `Итого: ${stats.summaryLine}`
+      ].join('\n');
+
+      const handleQuickEntry = (e) => {
+        e.preventDefault();
+        if (!quickModel.trim()) return;
+        const parsedAmt = parseAmountFromPriceText(quickPrice, null, null);
+        onRunCreation('БЫСТРАЯ ЗАПИСЬ', `Добавляем ${quickModel.trim()} в кассу...`, () => {
+          onAddBooking({
+            id: `bk-${Date.now()}`,
+            date: todayStr,
+            bookingDate: todayStr,
+            model: quickModel.trim(),
+            duration: '1 час',
+            priceText: quickPrice.trim() || '0 GEL',
+            amountNum: parsedAmt.amount,
+            currency: parsedAmt.currency,
+            operator: quickOp.trim() || 'Оператор',
+            timeSlot: new Date().toTimeString().slice(0, 5),
+            clientPhone: '',
+            review: 'Быстрая запись из меню сводки',
+            address: 'Тбилиси'
+          });
+        });
+      };
+
+      return h('div', {
+        onClick: onClose,
+        className: 'fixed inset-0 z-50 bg-obsidian/80 backdrop-blur-sm flex items-center justify-center p-4'
+      },
+        h('div', {
+          onClick: (e) => e.stopPropagation(),
+          className: 'glass-panel w-full max-w-md rounded-[12px] p-5 space-y-4 border border-crimson-700/60 shadow-2xl'
+        },
+          h('div', { className: 'flex items-center justify-between border-b border-hairline pb-3' },
+            h('div', null,
+              h('p', { className: 'text-[10px] uppercase tracking-widest text-crimson-500 font-bold' }, 'TABU • SHIFT MENU'),
+              h('h2', { className: 'font-brand-brush text-sm sm:text-base text-white uppercase mt-0.5' }, 'КАССА И ПЕРИОДЫ')
+            ),
+            h('button', {
+              type: 'button',
+              onClick: onClose,
+              className: 'btn-press px-2.5 py-1 rounded-[7px] bg-elevated border border-hairline text-xs text-zinc-300 hover:text-white'
+            }, '✕')
+          ),
+
+          h('div', { className: 'grid grid-cols-3 gap-1.5' },
+            [
+              { id: 'today', label: 'Сегодня' },
+              { id: 'export_day', label: '09.04.2026' },
+              { id: 'all', label: 'Всё время' }
+            ].map((p) =>
+              h('button', {
+                key: p.id,
+                type: 'button',
+                onClick: () => setPeriod(p.id),
+                className: `btn-press py-1.5 px-2 rounded-[8px] text-xs font-semibold border ${
+                  period === p.id
+                    ? 'bg-crimson-700 border-crimson-600 text-white'
+                    : 'glass-field text-zinc-400 hover:text-white'
+                }`
+              }, p.label)
+            )
+          ),
+
+          h('div', { className: 'glass-field rounded-[8px] p-3.5 space-y-2' },
+            h('div', { className: 'flex items-center justify-between text-xs text-zinc-400' },
+              h('span', null, 'Записей за период:'),
+              h('span', { className: 'font-bold text-white' }, stats.count)
+            ),
+            h('div', { className: 'flex items-center justify-between gap-2' },
+              h('span', { className: 'text-xs text-zinc-400' }, 'Сумма по валютам:'),
+              h('span', { className: 'text-sm font-extrabold text-crimson-500 text-right' }, stats.summaryLine)
+            ),
+            h('div', { className: 'pt-1 flex gap-2' },
+              h('button', {
+                type: 'button',
+                onClick: () => onCopy(summaryText, 'Сводка по периоду скопирована'),
+                className: 'btn-press flex-1 py-1.5 rounded-[7px] bg-surface border border-hairline hover:border-crimson-600 text-xs text-white font-semibold'
+              }, 'Копировать сводку'),
+              h('button', {
+                type: 'button',
+                onClick: () => {
+                  onClose();
+                  onNavigate('accounting');
+                },
+                className: 'btn-press py-1.5 px-3 rounded-[7px] bg-crimson-700 hover:bg-crimson-600 text-xs text-white font-semibold'
+              }, 'Журнал →')
+            )
+          ),
+
+          h('form', { onSubmit: handleQuickEntry, className: 'glass-field rounded-[8px] p-3 space-y-2' },
+            h('p', { className: 'text-[11px] font-bold text-zinc-300 uppercase tracking-wider' }, 'Быстрая запись за сегодня'),
+            h('div', { className: 'grid grid-cols-1 sm:grid-cols-3 gap-2' },
+              h('input', {
+                type: 'text',
+                value: quickModel,
+                onChange: (e) => setQuickModel(e.target.value),
+                placeholder: 'Модель',
+                className: 'glass-panel rounded-[7px] px-2.5 py-1.5 text-xs text-white outline-none focus:border-crimson-600'
+              }),
+              h('input', {
+                type: 'text',
+                value: quickPrice,
+                onChange: (e) => setQuickPrice(e.target.value),
+                placeholder: '700 GEL / 200$',
+                className: 'glass-panel rounded-[7px] px-2.5 py-1.5 text-xs text-white outline-none focus:border-crimson-600'
+              }),
+              h('input', {
+                type: 'text',
+                value: quickOp,
+                onChange: (e) => setQuickOp(e.target.value),
+                placeholder: 'Оператор',
+                className: 'glass-panel rounded-[7px] px-2.5 py-1.5 text-xs text-white outline-none focus:border-crimson-600'
+              })
+            ),
+            h('button', {
+              type: 'submit',
+              className: 'btn-press w-full py-2 rounded-[8px] bg-crimson-700 hover:bg-crimson-600 text-white text-xs font-bold'
+            }, '+ Добавить в кассу')
+          ),
+
+          h('div', { className: 'flex items-center justify-between gap-2 pt-1' },
+            h('button', {
+              type: 'button',
+              onClick: () => {
+                onClose();
+                onCustomLogoClick();
+              },
+              className: 'btn-press glass-field flex-1 py-2 px-3 rounded-[8px] hover:border-crimson-600 text-xs text-zinc-200 font-medium'
+            }, customLogo ? 'Сменить фон / логотип' : 'Загрузить свой фон'),
+            customLogo && h('button', {
+              type: 'button',
+              onClick: () => {
+                onResetCustomLogo();
+                onClose();
+              },
+              className: 'btn-press glass-field py-2 px-3 rounded-[8px] hover:border-crimson-600 text-xs text-zinc-400 hover:text-white'
+            }, 'Сбросить фон')
+          )
+        )
+      );
+    }
+
+    // =========================================================================
+    // 5. МОДУЛЬ 2: ЧС НОМЕРА (БАЗА И ДОБАВЛЕНИЕ)
+    // =========================================================================
+    function BlacklistView({ blacklist, onAdd, onDelete, onCopy, onRunCreation }) {
+      const [search, setSearch] = useState('');
+      const [tagFilter, setTagFilter] = useState('Все');
+      const [phone, setPhone] = useState('');
+      const [tag, setTag] = useState('Неадекват');
+      const [reason, setReason] = useState('');
+      const [addedBy, setAddedBy] = useState('Eva');
+
+      const tags = ['Все', 'Неадекват', 'Фейк', 'Точечный ЧС', 'Опасно', 'ЧС'];
+
+      const filteredList = useMemo(() => {
+        const lower = search.trim().toLowerCase();
+        return blacklist.filter((item) => {
+          const tagOk = tagFilter === 'Все' || item.tag === tagFilter;
+          if (!tagOk) return false;
+          if (!search.trim()) return true;
+          return (
+            phoneMatchesQuery(item.phone, search) ||
+            item.reason.toLowerCase().includes(lower) ||
+            item.addedBy.toLowerCase().includes(lower)
+          );
+        });
+      }, [blacklist, search, tagFilter]);
+
+      const handleSubmit = (e) => {
+        e.preventDefault();
+        if (!phone.trim() || !reason.trim()) return;
+        const exactPhone = exactPhoneFromFile(phone);
+        onRunCreation('ДОБАВЛЕНИЕ В ЧС', `Сохраняем номер ${exactPhone}...`, () => {
+          onAdd({
+            phone: exactPhone,
+            reason: reason.trim(),
+            tag,
+            addedBy: addedBy.trim() || 'Оператор TAB',
+            date: todayFormatted()
+          });
+          setPhone('');
+          setReason('');
+        });
+      };
+
+      return h('div', { className: 'space-y-6' },
+        h('section', { className: 'glass-panel rounded-[8px] p-5' },
+          h('h2', { className: 'font-brand-brush text-base sm:text-lg text-white uppercase mb-4' }, 'ВНЕСТИ НОМЕР В ЧЁРНЫЙ СПИСОК'),
+          h('form', { onSubmit: handleSubmit, className: 'grid grid-cols-1 sm:grid-cols-2 gap-3' },
+            h('div', null,
+              h('label', { className: 'block text-xs text-zinc-400 mb-1' }, 'Номер телефона (в точном написании)'),
+              h('input', {
+                type: 'text',
+                required: true,
+                value: phone,
+                onChange: (e) => setPhone(e.target.value),
+                placeholder: '+995 5XX XX XX XX',
+                className: 'glass-field wavy-contour w-full px-3.5 py-2.5 text-sm text-white placeholder-zinc-400 outline-none'
+              })
+            ),
+            h('div', { className: 'grid grid-cols-2 gap-2' },
+              h('div', null,
+                h('label', { className: 'block text-xs text-zinc-400 mb-1' }, 'Метка'),
+                h('select', {
+                  value: tag,
+                  onChange: (e) => setTag(e.target.value),
+                  className: 'glass-field wavy-contour w-full px-3 py-2.5 text-sm text-white outline-none'
+                },
+                  h('option', { value: 'Неадекват' }, 'Неадекват'),
+                  h('option', { value: 'Фейк' }, 'Фейк'),
+                  h('option', { value: 'Точечный ЧС' }, 'Точечный ЧС'),
+                  h('option', { value: 'Опасно' }, 'Опасно'),
+                  h('option', { value: 'ЧС' }, 'ЧС')
+                )
+              ),
+              h('div', null,
+                h('label', { className: 'block text-xs text-zinc-400 mb-1' }, 'Кто добавил'),
+                h('input', {
+                  type: 'text',
+                  value: addedBy,
+                  onChange: (e) => setAddedBy(e.target.value),
+                  placeholder: 'Имя / смена',
+                  className: 'glass-field wavy-contour w-full px-3.5 py-2.5 text-sm text-white placeholder-zinc-400 outline-none'
+                })
+              )
+            ),
+            h('div', { className: 'sm:col-span-2' },
+              h('label', { className: 'block text-xs text-zinc-400 mb-1' }, 'Причина и детали инцидента'),
+              h('textarea', {
+                rows: '2',
+                required: true,
+                value: reason,
+                onChange: (e) => setReason(e.target.value),
+                placeholder: 'К кому не пускать, фейк оплата/крипта/выезд, детали...',
+                className: 'glass-field wavy-contour w-full px-3.5 py-2.5 text-sm text-white placeholder-zinc-400 outline-none'
+              })
+            ),
+            h('div', { className: 'sm:col-span-2 flex justify-end' },
+              h('button', {
+                type: 'submit',
+                className: 'btn-press w-full sm:w-auto px-5 py-2.5 rounded-[8px] bg-crimson-700 hover:bg-crimson-600 text-white text-sm font-semibold'
+              }, 'Сохранить в ЧС')
+            )
+          )
+        ),
+
+        h('section', { className: 'space-y-3' },
+          h('div', { className: 'flex flex-col sm:flex-row sm:items-center justify-between gap-3' },
+            h('input', {
+              type: 'text',
+              value: search,
+              onChange: (e) => setSearch(e.target.value),
+              placeholder: `Поиск среди ${blacklist.length} записей по номеру, имени модели или автору...`,
+              className: 'glass-panel wavy-contour w-full sm:max-w-md px-3.5 py-2 text-sm text-white placeholder-zinc-400 outline-none'
+            }),
+            h('div', { className: 'flex items-center gap-1.5 overflow-x-auto no-scrollbar pb-1' },
+              tags.map((t) =>
+                h('button', {
+                  key: t,
+                  type: 'button',
+                  onClick: () => setTagFilter(t),
+                  className: `btn-press px-3 py-1.5 rounded-[8px] text-xs font-medium whitespace-nowrap border ${
+                    tagFilter === t
+                      ? 'bg-crimson-700 border-crimson-600 text-white'
+                      : 'glass-panel text-zinc-400 hover:text-white'
+                  }`
+                }, t)
+              )
+            )
+          ),
+
+          filteredList.length === 0
+            ? h('div', { className: 'glass-panel rounded-[8px] p-8 text-center text-sm text-zinc-400' },
+                'Записей по заданному фильтру нет.'
+              )
+            : h('div', { className: 'space-y-2.5' },
+                filteredList.map((item) =>
+                  h('div', {
+                    key: item.id,
+                    className: 'glass-panel rounded-[8px] p-4 flex flex-col sm:flex-row sm:items-start justify-between gap-3'
+                  },
+                    h('div', { className: 'space-y-1.5 min-w-0' },
+                      h('div', { className: 'flex flex-wrap items-center gap-2' },
+                        h('span', { className: 'text-sm sm:text-base font-bold text-white' }, formatPhoneDisplay(item.phone)),
+                        h('span', { className: 'px-2 py-0.5 text-[11px] font-semibold rounded-[6px] bg-crimson-900/60 text-crimson-500 border border-crimson-700/60' }, item.tag),
+                        h('span', { className: 'text-xs text-zinc-500' }, `${item.date} • ${item.addedBy}`)
+                      ),
+                      h('p', { className: 'text-sm text-zinc-200 leading-relaxed' }, item.reason)
+                    ),
+                    h('div', { className: 'flex items-center gap-2 shrink-0 self-end sm:self-start' },
+                      h('button', {
+                        type: 'button',
+                        onClick: () => onCopy(formatPhoneDisplay(item.phone), 'Номер скопирован'),
+                        className: 'btn-press glass-field px-2.5 py-1.5 rounded-[8px] hover:border-zinc-500 text-xs text-zinc-200'
+                      }, 'Копировать'),
+                      h('button', {
+                        type: 'button',
+                        onClick: () => onDelete(item.id),
+                        className: 'btn-press glass-field px-2.5 py-1.5 rounded-[8px] hover:border-crimson-600 text-xs text-zinc-400 hover:text-crimson-500'
+                      }, 'Удалить')
+                    )
+                  )
+                )
+              )
+        )
+      );
+    }
+
+    // =========================================================================
+    // 6. МОДУЛЬ 3: МОДЕЛИ И КАРТОЧКИ ДЛЯ КЛИЕНТА
+    // =========================================================================
+    function ModelsView({ models, onAddModel, onUpdateModel, onDeleteModel, onCopy, onRunCreation }) {
+      const [selectedId, setSelectedId] = useState(models[0]?.id || null);
+      const [showAddForm, setShowAddForm] = useState(false);
+      const [activePhotoIndex, setActivePhotoIndex] = useState(0);
+      const [lightboxOpen, setLightboxOpen] = useState(false);
+      const [searchModel, setSearchModel] = useState('');
+      const [newModel, setNewModel] = useState({
+        name: '',
+        age: '20',
+        height: '170',
+        weight: '52',
+        bust: '—',
+        status: 'Активна',
+        incall: '30 мин — 500 GEL / 1 ч — 700 GEL',
+        outcall: '1 ч — 1000 GEL / 2 ч — 1500 GEL / 3 ч — 3000 GEL',
+        fullNight: 'По договорённости',
+        services: 'Массаж, минет без резинки, секс, GFE',
+        extras: '',
+        address: 'Тбилиси',
+        intercom: '',
+        mapUrl: '',
+        internalNote: '',
+        photoDataUrl: '',
+        photos: []
+      });
+
+      const filteredModels = useMemo(() => {
+        const q = searchModel.trim().toLowerCase();
+        if (!q) return models;
+        return models.filter(
+          (m) =>
+            String(m.name || '').toLowerCase().includes(q) ||
+            String(m.address || '').toLowerCase().includes(q) ||
+            String(m.services || '').toLowerCase().includes(q)
+        );
+      }, [models, searchModel]);
+
+      const selectedModel = useMemo(
+        () =>
+          models.find((m) => m.id === selectedId) ||
+          filteredModels[0] ||
+          models[0] ||
+          null,
+        [models, filteredModels, selectedId]
+      );
+
+      const getModelPhotos = (m) => {
+        if (!m) return [];
+        const list = Array.isArray(m.photos) ? m.photos.filter(Boolean) : [];
+        if (list.length > 0) return list;
+        if (m.photoDataUrl) return [m.photoDataUrl];
+        return [];
+      };
+
+      const selectedPhotos = useMemo(() => getModelPhotos(selectedModel), [selectedModel]);
+      const newModelPhotos = useMemo(() => getModelPhotos(newModel), [newModel]);
+
+      useEffect(() => {
+        setActivePhotoIndex(0);
+        setLightboxOpen(false);
+      }, [selectedId, selectedPhotos.length]);
+
+      const readFileAsCompressedDataUrl = (file, maxSide = 1280, quality = 0.84) => {
+        return new Promise((resolve) => {
+          const reader = new FileReader();
+          reader.onload = () => {
+            const rawUrl = String(reader.result || '');
+            const img = new Image();
+            img.onload = () => {
+              let { width, height } = img;
+              if (width > maxSide || height > maxSide) {
+                if (width >= height) {
+                  height = Math.round((height * maxSide) / width);
+                  width = maxSide;
+                } else {
+                  width = Math.round((width * maxSide) / height);
+                  height = maxSide;
+                }
+              }
+              const canvas = document.createElement('canvas');
+              canvas.width = width;
+              canvas.height = height;
+              const ctx = canvas.getContext('2d');
+              if (ctx) {
+                ctx.drawImage(img, 0, 0, width, height);
+                resolve(canvas.toDataURL('image/jpeg', quality));
+              } else {
+                resolve(rawUrl);
+              }
+            };
+            img.onerror = () => resolve(rawUrl);
+            img.src = rawUrl;
+          };
+          reader.onerror = () => resolve('');
+          reader.readAsDataURL(file);
+        });
+      };
+
+      const handlePhotoUpload = async (e, targetMode) => {
+        const files = Array.from((e.target && e.target.files) || []);
+        e.target.value = '';
+        if (files.length === 0) return;
+
+        const uploadedUrls = (
+          await Promise.all(files.map((file) => readFileAsCompressedDataUrl(file)))
+        ).filter(Boolean);
+
+        if (uploadedUrls.length === 0) return;
+
+        if (targetMode === 'new') {
+          setNewModel((prev) => {
+            const existing = getModelPhotos(prev);
+            const merged = [...existing, ...uploadedUrls];
+            return {
+              ...prev,
+              photos: merged,
+              photoDataUrl: merged[0] || ''
+            };
+          });
+        } else if (selectedModel) {
+          const existing = getModelPhotos(selectedModel);
+          const merged = [...existing, ...uploadedUrls];
+          onUpdateModel({
+            ...selectedModel,
+            photos: merged,
+            photoDataUrl: merged[0] || ''
+          });
+          setActivePhotoIndex(existing.length);
+        }
+      };
+
+      const handleRemovePhoto = (indexToRemove, targetMode) => {
+        if (targetMode === 'new') {
+          setNewModel((prev) => {
+            const existing = getModelPhotos(prev);
+            const nextList = existing.filter((_, idx) => idx !== indexToRemove);
+            return {
+              ...prev,
+              photos: nextList,
+              photoDataUrl: nextList[0] || ''
+            };
+          });
+        } else if (selectedModel) {
+          const existing = getModelPhotos(selectedModel);
+          const nextList = existing.filter((_, idx) => idx !== indexToRemove);
+          onUpdateModel({
+            ...selectedModel,
+            photos: nextList,
+            photoDataUrl: nextList[0] || ''
+          });
+          setActivePhotoIndex((prevIdx) => {
+            if (nextList.length === 0) return 0;
+            return Math.min(prevIdx, nextList.length - 1);
+          });
+        }
+      };
+
+      const handleClearAllPhotos = () => {
+        if (!selectedModel) return;
+        onUpdateModel({
+          ...selectedModel,
+          photos: [],
+          photoDataUrl: ''
+        });
+        setActivePhotoIndex(0);
+        setLightboxOpen(false);
+      };
+
+      const handleDownloadPhoto = (model, photoIdx = 0) => {
+        const list = getModelPhotos(model);
+        const targetUrl = list[photoIdx] || list[0];
+        if (!model || !targetUrl) return;
+        const link = document.createElement('a');
+        link.href = targetUrl;
+        link.download = `${model.name || 'model'}-photo-${photoIdx + 1}.jpg`;
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+      };
+
+      const buildClientCardText = (m) => {
+        return [
+          `${m.name}, ${m.age} лет`,
+          `Рост / вес${m.bust && m.bust !== '—' ? ' / грудь' : ''}: ${m.height} см / ${m.weight} кг${m.bust && m.bust !== '—' ? ` / ${m.bust}` : ''}`,
+          `Incall: ${m.incall}`,
+          `Outcall: ${m.outcall}`,
+          m.fullNight && m.fullNight !== 'По договорённости' ? `Ночь: ${m.fullNight}` : null,
+          `В встречу входит: ${m.services}`,
+          m.extras ? `Допы: ${m.extras}` : null,
+          `Адрес: ${m.address}`,
+          m.mapUrl ? `Локация: ${m.mapUrl}` : null
+        ]
+          .filter(Boolean)
+          .join('\n');
+      };
+
+      const handleCreateModel = (e) => {
+        e.preventDefault();
+        if (!newModel.name.trim()) return;
+        const finalPhotos = getModelPhotos(newModel);
+        const created = {
+          ...newModel,
+          id: `m-${Date.now()}`,
+          age: Number(newModel.age) || 20,
+          height: Number(newModel.height) || 170,
+          weight: Number(newModel.weight) || 52,
+          photos: finalPhotos,
+          photoDataUrl: finalPhotos[0] || ''
+        };
+        onRunCreation('СОЗДАНИЕ АНКЕТЫ', `Собираем карточку ${created.name}...`, () => {
+          onAddModel(created);
+          setSelectedId(created.id);
+          setShowAddForm(false);
+          setNewModel({
+            name: '',
+            age: '20',
+            height: '170',
+            weight: '52',
+            bust: '—',
+            status: 'Активна',
+            incall: '30 мин — 500 GEL / 1 ч — 700 GEL',
+            outcall: '1 ч — 1000 GEL / 2 ч — 1500 GEL / 3 ч — 3000 GEL',
+            fullNight: 'По договорённости',
+            services: 'Массаж, минет без резинки, секс, GFE',
+            extras: '',
+            address: 'Тбилиси',
+            intercom: '',
+            mapUrl: '',
+            internalNote: '',
+            photoDataUrl: '',
+            photos: []
+          });
+        });
+      };
+
+      const currentPhotoSrc = selectedPhotos[activePhotoIndex] || selectedPhotos[0] || '';
+
+      return h('div', { className: 'space-y-4 sm:space-y-5' },
+        h('div', { className: 'glass-panel rounded-[10px] p-3 flex flex-col sm:flex-row sm:items-center justify-between gap-2.5' },
+          h('div', { className: 'flex items-center gap-2 overflow-x-auto no-scrollbar py-0.5 flex-1' },
+            filteredModels.map((m) => {
+              const active = selectedModel && selectedModel.id === m.id;
+              const mCount = getModelPhotos(m).length;
+              return h('button', {
+                key: m.id,
+                type: 'button',
+                onClick: () => {
+                  tgHaptic('light');
+                  setSelectedId(m.id);
+                  setShowAddForm(false);
+                },
+                className: `btn-press px-3 py-1.5 rounded-[8px] text-xs font-semibold whitespace-nowrap border flex items-center gap-1.5 ${
+                  active
+                    ? 'bg-crimson-700 border-crimson-500 text-white shadow-sm'
+                    : 'glass-field text-zinc-300 hover:text-white'
+                }`
+              },
+                h('span', {
+                  className: `w-1.5 h-1.5 rounded-full ${m.status === 'Активна' ? 'bg-emerald-400' : 'bg-amber-400'}`
+                }),
+                h('span', null, m.name),
+                mCount > 0 && h('span', {
+                  className: `px-1.5 py-0.2 rounded text-[10px] font-bold ${
+                    active ? 'bg-black/35 text-white' : 'bg-crimson-900/60 text-crimson-500'
+                  }`
+                }, mCount)
+              );
+            })
+          ),
+
+          h('div', { className: 'flex items-center gap-2 shrink-0' },
+            h('input', {
+              type: 'text',
+              value: searchModel,
+              onChange: (e) => setSearchModel(e.target.value),
+              placeholder: 'Поиск модели...',
+              className: 'glass-field rounded-[8px] px-3 py-1.5 text-xs text-white placeholder-zinc-400 outline-none focus:border-crimson-600 w-32 sm:w-40'
+            }),
+            h('button', {
+              type: 'button',
+              onClick: () => setShowAddForm((prev) => !prev),
+              className: 'btn-press px-3 py-1.5 rounded-[8px] bg-crimson-700 hover:bg-crimson-600 text-xs font-semibold text-white whitespace-nowrap'
+            }, showAddForm ? 'Закрыть' : '+ Модель')
+          )
+        ),
+
+        showAddForm && h('section', { className: 'glass-panel rounded-[10px] p-4 sm:p-5' },
+          h('h3', { className: 'font-brand-brush text-sm sm:text-base text-white uppercase mb-3' }, 'НОВАЯ КАРТОЧКА МОДЕЛИ'),
+          h('form', { onSubmit: handleCreateModel, className: 'grid grid-cols-1 sm:grid-cols-3 gap-3' },
+            h('input', {
+              type: 'text',
+              required: true,
+              value: newModel.name,
+              onChange: (e) => setNewModel({ ...newModel, name: e.target.value }),
+              placeholder: 'Имя модели',
+              className: 'glass-field rounded-[8px] px-3 py-2 text-sm text-white outline-none focus:border-crimson-600'
+            }),
+            h('input', {
+              type: 'number',
+              value: newModel.age,
+              onChange: (e) => setNewModel({ ...newModel, age: e.target.value }),
+              placeholder: 'Возраст',
+              className: 'glass-field rounded-[8px] px-3 py-2 text-sm text-white outline-none focus:border-crimson-600'
+            }),
+            h('select', {
+              value: newModel.status,
+              onChange: (e) => setNewModel({ ...newModel, status: e.target.value }),
+              className: 'glass-field rounded-[8px] px-3 py-2 text-sm text-white outline-none focus:border-crimson-600'
+            },
+              h('option', { value: 'Активна' }, 'Активна'),
+              h('option', { value: 'На заказе' }, 'На заказе')
+            ),
+            h('input', {
+              type: 'number',
+              value: newModel.height,
+              onChange: (e) => setNewModel({ ...newModel, height: e.target.value }),
+              placeholder: 'Рост (см)',
+              className: 'glass-field rounded-[8px] px-3 py-2 text-sm text-white outline-none'
+            }),
+            h('input', {
+              type: 'number',
+              value: newModel.weight,
+              onChange: (e) => setNewModel({ ...newModel, weight: e.target.value }),
+              placeholder: 'Вес (кг)',
+              className: 'glass-field rounded-[8px] px-3 py-2 text-sm text-white outline-none'
+            }),
+            h('input', {
+              type: 'text',
+              value: newModel.bust,
+              onChange: (e) => setNewModel({ ...newModel, bust: e.target.value }),
+              placeholder: 'Грудь (или —)',
+              className: 'glass-field rounded-[8px] px-3 py-2 text-sm text-white outline-none'
+            }),
+            h('input', {
+              type: 'text',
+              value: newModel.incall,
+              onChange: (e) => setNewModel({ ...newModel, incall: e.target.value }),
+              placeholder: 'Прайс Incall',
+              className: 'glass-field rounded-[8px] px-3 py-2 text-sm text-white outline-none'
+            }),
+            h('input', {
+              type: 'text',
+              value: newModel.outcall,
+              onChange: (e) => setNewModel({ ...newModel, outcall: e.target.value }),
+              placeholder: 'Прайс Outcall',
+              className: 'glass-field rounded-[8px] px-3 py-2 text-sm text-white outline-none'
+            }),
+            h('input', {
+              type: 'text',
+              value: newModel.address,
+              onChange: (e) => setNewModel({ ...newModel, address: e.target.value }),
+              placeholder: 'Адрес',
+              className: 'glass-field rounded-[8px] px-3 py-2 text-sm text-white outline-none'
+            }),
+            h('textarea', {
+              rows: '2',
+              value: newModel.services,
+              onChange: (e) => setNewModel({ ...newModel, services: e.target.value }),
+              placeholder: 'В встречу входит',
+              className: 'glass-field sm:col-span-3 rounded-[8px] px-3 py-2 text-sm text-white outline-none'
+            }),
+
+            newModelPhotos.length > 0 && h('div', { className: 'sm:col-span-3 flex items-center gap-2 overflow-x-auto no-scrollbar py-1' },
+              newModelPhotos.map((srcImg, idx) =>
+                h('div', {
+                  key: idx,
+                  className: 'relative w-12 h-14 rounded-[6px] overflow-hidden border border-hairline shrink-0'
+                },
+                  h('img', {
+                    src: srcImg,
+                    alt: `new-${idx + 1}`,
+                    className: 'w-full h-full object-cover'
+                  }),
+                  h('button', {
+                    type: 'button',
+                    onClick: () => handleRemovePhoto(idx, 'new'),
+                    className: 'btn-press absolute top-0.5 right-0.5 w-4 h-4 rounded-full bg-black/80 text-white text-[9px] flex items-center justify-center hover:bg-crimson-600'
+                  }, '✕')
+                )
+              )
+            ),
+
+            h('div', { className: 'sm:col-span-3 flex flex-wrap items-center justify-between gap-3 pt-1' },
+              h('label', { className: 'btn-press glass-field cursor-pointer px-3.5 py-2 rounded-[8px] hover:border-crimson-600 text-xs text-zinc-200' },
+                newModelPhotos.length > 0 ? `Добавить ещё фото (${newModelPhotos.length})` : '+ Загрузить фото (можно несколько)',
+                h('input', {
+                  type: 'file',
+                  accept: 'image/*',
+                  multiple: true,
+                  onChange: (e) => handlePhotoUpload(e, 'new'),
+                  className: 'hidden'
+                })
+              ),
+              h('button', {
+                type: 'submit',
+                className: 'btn-press px-5 py-2 rounded-[8px] bg-crimson-700 hover:bg-crimson-600 text-white text-sm font-semibold'
+              }, 'Создать карточку')
+            )
+          )
+        ),
+
+        selectedModel && h('section', { className: 'glass-panel rounded-[10px] p-4 sm:p-5' },
+          h('div', { className: 'flex flex-col md:flex-row gap-5 items-start' },
+            h('div', { className: 'w-full md:w-[230px] lg:w-[250px] shrink-0 space-y-2.5' },
+              h('div', {
+                onClick: () => currentPhotoSrc && setLightboxOpen(true),
+                className: `glass-field relative w-full h-[230px] sm:h-[250px] rounded-[10px] overflow-hidden flex items-center justify-center ${
+                  currentPhotoSrc ? 'cursor-zoom-in group' : ''
+                }`
+              },
+                currentPhotoSrc
+                  ? h('img', {
+                      src: currentPhotoSrc,
+                      alt: `${selectedModel.name} — фото ${activePhotoIndex + 1}`,
+                      className: 'w-full h-full object-cover object-top transition-transform duration-200 group-hover:scale-[1.03]',
+                      onError: (e) => {
+                        e.currentTarget.style.display = 'none';
+                      }
+                    })
+                  : h('div', { className: 'text-center p-4 space-y-1.5' },
+                      h('p', { className: 'font-brand-brush text-base text-crimson-500' }, selectedModel.name),
+                      h('p', { className: 'text-[11px] text-zinc-400 leading-snug' }, 'Фото не прикреплены. Нажмите «+ Фото» для загрузки.')
+                    ),
+
+                selectedPhotos.length > 0 && h('span', {
+                  className: 'absolute top-2 left-2 px-2 py-0.5 rounded bg-obsidian/80 border border-hairline text-[10px] font-bold text-white'
+                }, `${activePhotoIndex + 1}/${selectedPhotos.length}`),
+
+                currentPhotoSrc && h('span', {
+                  className: 'absolute bottom-2 right-2 px-2 py-0.5 rounded bg-obsidian/80 border border-hairline text-[10px] text-zinc-200'
+                }, 'Увеличить'),
+
+                selectedPhotos.length > 1 && h('button', {
+                  type: 'button',
+                  onClick: (e) => {
+                    e.stopPropagation();
+                    setActivePhotoIndex((prev) => (prev - 1 + selectedPhotos.length) % selectedPhotos.length);
+                  },
+                  title: 'Назад',
+                  className: 'btn-press absolute left-1.5 top-1/2 -translate-y-1/2 w-7 h-7 rounded-full bg-obsidian/80 border border-hairline text-white text-sm flex items-center justify-center hover:border-crimson-600'
+                }, '‹'),
+
+                selectedPhotos.length > 1 && h('button', {
+                  type: 'button',
+                  onClick: (e) => {
+                    e.stopPropagation();
+                    setActivePhotoIndex((prev) => (prev + 1) % selectedPhotos.length);
+                  },
+                  title: 'Вперёд',
+                  className: 'btn-press absolute right-1.5 top-1/2 -translate-y-1/2 w-7 h-7 rounded-full bg-obsidian/80 border border-hairline text-white text-sm flex items-center justify-center hover:border-crimson-600'
+                }, '›')
+              ),
+
+              selectedPhotos.length > 0 && h('div', { className: 'flex items-center gap-1.5 overflow-x-auto no-scrollbar py-0.5' },
+                selectedPhotos.map((pUrl, idx) => {
+                  const isCurrent = idx === activePhotoIndex;
+                  return h('div', {
+                    key: idx,
+                    className: `relative w-11 h-11 rounded-[6px] overflow-hidden shrink-0 border transition ${
+                      isCurrent ? 'border-crimson-500 ring-1 ring-crimson-500' : 'border-hairline opacity-70 hover:opacity-100'
+                    }`
+                  },
+                    h('button', {
+                      type: 'button',
+                      onClick: () => setActivePhotoIndex(idx),
+                      className: 'w-full h-full block'
+                    },
+                      h('img', {
+                        src: pUrl,
+                        alt: `thumb-${idx + 1}`,
+                        className: 'w-full h-full object-cover object-top'
+                      })
+                    ),
+                    h('button', {
+                      type: 'button',
+                      onClick: () => handleRemovePhoto(idx, 'current'),
+                      title: 'Удалить фото',
+                      className: 'btn-press absolute top-0.5 right-0.5 w-3.5 h-3.5 rounded-full bg-black/85 text-white text-[8px] flex items-center justify-center hover:bg-crimson-600'
+                    }, '✕')
+                  );
+                })
+              ),
+
+              h('div', { className: 'flex flex-wrap items-center gap-1.5' },
+                h('label', { className: 'btn-press glass-field flex-1 text-center cursor-pointer px-2.5 py-1.5 rounded-[7px] hover:border-crimson-600 text-[11px] font-semibold text-white whitespace-nowrap' },
+                  selectedPhotos.length > 0 ? '+ Фото' : '+ Загрузить фото',
+                  h('input', {
+                    type: 'file',
+                    accept: 'image/*',
+                    multiple: true,
+                    onChange: (e) => handlePhotoUpload(e, 'current'),
+                    className: 'hidden'
+                  })
+                ),
+                selectedPhotos.length > 0 && h('button', {
+                  type: 'button',
+                  onClick: () => handleDownloadPhoto(selectedModel, activePhotoIndex),
+                  className: 'btn-press glass-field px-2.5 py-1.5 rounded-[7px] hover:border-zinc-500 text-[11px] text-zinc-200'
+                }, 'Скачать'),
+                selectedPhotos.length > 1 && h('button', {
+                  type: 'button',
+                  onClick: handleClearAllPhotos,
+                  className: 'btn-press glass-field px-2 py-1.5 rounded-[7px] hover:border-crimson-600 text-[11px] text-zinc-400 hover:text-crimson-500'
+                }, 'Очистить'),
+                models.length > 1 && h('button', {
+                  type: 'button',
+                  onClick: () => onDeleteModel(selectedModel.id),
+                  className: 'btn-press glass-field px-2 py-1.5 rounded-[7px] hover:border-crimson-600 text-[11px] text-zinc-400 hover:text-crimson-500'
+                }, 'Удалить')
+              )
+            ),
+
+            h('div', { className: 'flex-1 min-w-0 w-full space-y-3.5' },
+              h('div', { className: 'flex flex-wrap items-center justify-between gap-2.5 border-b border-hairline pb-3' },
+                h('div', { className: 'space-y-1' },
+                  h('h2', { className: 'text-lg sm:text-xl font-extrabold text-white leading-tight' }, selectedModel.name),
+                  h('div', { className: 'flex flex-wrap items-center gap-1.5 text-[11px] text-zinc-300' },
+                    h('span', { className: 'px-2 py-0.5 rounded bg-elevated/80 border border-hairline' }, `${selectedModel.age} лет`),
+                    h('span', { className: 'px-2 py-0.5 rounded bg-elevated/80 border border-hairline' }, `${selectedModel.height} см`),
+                    h('span', { className: 'px-2 py-0.5 rounded bg-elevated/80 border border-hairline' }, `${selectedModel.weight} кг`),
+                    selectedModel.bust && selectedModel.bust !== '—' && h('span', { className: 'px-2 py-0.5 rounded bg-elevated/80 border border-hairline' }, `Грудь ${selectedModel.bust}`),
+                    selectedPhotos.length > 0 && h('span', { className: 'px-2 py-0.5 rounded bg-crimson-900/40 border border-crimson-700/50 text-crimson-500 font-semibold' }, `${selectedPhotos.length} фото`)
+                  )
+                ),
+
+                h('button', {
+                  type: 'button',
+                  onClick: () => {
+                    tgHaptic('light');
+                    onUpdateModel({
+                      ...selectedModel,
+                      status: selectedModel.status === 'Активна' ? 'На заказе' : 'Активна'
+                    });
+                  },
+                  className: `btn-press px-3 py-1.5 rounded-[8px] text-xs font-bold border shrink-0 ${
+                    selectedModel.status === 'Активна'
+                      ? 'bg-emerald-950/60 border-emerald-700 text-emerald-300'
+                      : 'bg-crimson-900/50 border-crimson-600 text-white'
+                  }`
+                }, selectedModel.status)
+              ),
+
+              h('div', { className: 'grid grid-cols-1 sm:grid-cols-2 gap-2.5' },
+                h('div', { className: 'glass-field rounded-[8px] p-2.5' },
+                  h('p', { className: 'text-[10px] uppercase tracking-wider text-zinc-400 font-semibold' }, 'Incall'),
+                  h('p', { className: 'text-xs sm:text-sm text-white font-bold mt-0.5 leading-snug' }, selectedModel.incall)
+                ),
+                h('div', { className: 'glass-field rounded-[8px] p-2.5' },
+                  h('p', { className: 'text-[10px] uppercase tracking-wider text-zinc-400 font-semibold' }, 'Outcall'),
+                  h('p', { className: 'text-xs sm:text-sm text-white font-bold mt-0.5 leading-snug' }, selectedModel.outcall)
+                )
+              ),
+
+              h('div', { className: 'glass-field rounded-[8px] p-3 space-y-2 text-xs sm:text-[13px]' },
+                h('div', { className: 'leading-relaxed' },
+                  h('span', { className: 'text-zinc-400 font-medium' }, 'Входит в встречу: '),
+                  h('span', { className: 'text-zinc-100' }, selectedModel.services)
+                ),
+                selectedModel.extras && h('div', { className: 'border-t border-hairline/60 pt-2 leading-relaxed' },
+                  h('span', { className: 'text-zinc-400 font-medium' }, 'Допы: '),
+                  h('span', { className: 'text-zinc-100' }, selectedModel.extras)
+                ),
+                h('div', { className: 'border-t border-hairline/60 pt-2 flex flex-wrap items-center justify-between gap-2' },
+                  h('div', { className: 'min-w-0' },
+                    h('span', { className: 'text-zinc-400 font-medium' }, 'Адрес: '),
+                    h('span', { className: 'text-white font-semibold' }, selectedModel.address)
+                  ),
+                  selectedModel.mapUrl && h('a', {
+                    href: selectedModel.mapUrl,
+                    target: '_blank',
+                    rel: 'noopener noreferrer',
+                    className: 'text-xs text-crimson-500 hover:underline font-semibold shrink-0'
+                  }, 'Карта →')
+                )
+              ),
+
+              h('div', { className: 'glass-field rounded-[8px] p-3 space-y-1.5 border-crimson-800/40' },
+                h('div', { className: 'flex flex-wrap items-center justify-between gap-2' },
+                  h('span', { className: 'text-[10px] font-bold text-crimson-500 uppercase tracking-wider' }, 'Служебное (клиенту не копируется)'),
+                  selectedModel.intercom && h('span', { className: 'text-[11px] text-zinc-300 font-medium' }, `Доступ: ${selectedModel.intercom}`)
+                ),
+                h('input', {
+                  type: 'text',
+                  value: selectedModel.internalNote || '',
+                  onChange: (e) => onUpdateModel({ ...selectedModel, internalNote: e.target.value }),
+                  placeholder: 'Заметка для смены...',
+                  className: 'glass-panel w-full focus:border-crimson-600 rounded-[7px] px-2.5 py-1.5 text-xs text-white placeholder-zinc-500 outline-none'
+                })
+              ),
+
+              h('div', { className: 'pt-0.5 flex flex-wrap gap-2' },
+                h('button', {
+                  type: 'button',
+                  onClick: () => onCopy(buildClientCardText(selectedModel), `Анкета ${selectedModel.name} скопирована`),
+                  className: 'btn-press flex-1 min-w-[180px] px-4 py-2.5 rounded-[8px] bg-crimson-700 hover:bg-crimson-600 text-white text-xs sm:text-sm font-bold'
+                }, 'Копировать анкету'),
+                h('button', {
+                  type: 'button',
+                  onClick: () => onCopy(`${selectedModel.address}${selectedModel.intercom ? ` (${selectedModel.intercom})` : ''}`, 'Адрес скопирован'),
+                  className: 'btn-press glass-field px-3.5 py-2.5 rounded-[8px] hover:border-zinc-500 text-xs sm:text-sm text-zinc-200 font-semibold'
+                }, 'Копировать адрес')
+              )
+            )
+          )
+        ),
+
+        lightboxOpen && currentPhotoSrc && h('div', {
+          onClick: () => setLightboxOpen(false),
+          className: 'fixed inset-0 z-50 bg-black/90 backdrop-blur-md flex items-center justify-center p-4'
+        },
+          h('div', {
+            onClick: (e) => e.stopPropagation(),
+            className: 'relative max-w-2xl w-full max-h-[82vh] flex flex-col items-center gap-3'
+          },
+            h('div', { className: 'w-full flex items-center justify-between text-xs text-zinc-300' },
+              h('span', { className: 'font-bold text-white' }, `${selectedModel.name} • ${activePhotoIndex + 1} / ${selectedPhotos.length}`),
+              h('button', {
+                type: 'button',
+                onClick: () => setLightboxOpen(false),
+                className: 'btn-press px-3 py-1 rounded-[7px] bg-elevated border border-hairline text-white hover:border-crimson-600'
+              }, 'Закрыть ✕')
+            ),
+            h('img', {
+              src: currentPhotoSrc,
+              alt: selectedModel.name,
+              className: 'max-h-[70vh] w-auto max-w-full object-contain rounded-[10px] border border-hairline'
+            }),
+            selectedPhotos.length > 1 && h('div', { className: 'flex items-center gap-3' },
+              h('button', {
+                type: 'button',
+                onClick: () => setActivePhotoIndex((prev) => (prev - 1 + selectedPhotos.length) % selectedPhotos.length),
+                className: 'btn-press px-4 py-1.5 rounded-[8px] bg-elevated border border-hairline text-xs text-white hover:border-crimson-600'
+              }, '← Назад'),
+              h('button', {
+                type: 'button',
+                onClick: () => setActivePhotoIndex((prev) => (prev + 1) % selectedPhotos.length),
+                className: 'btn-press px-4 py-1.5 rounded-[8px] bg-elevated border border-hairline text-xs text-white hover:border-crimson-600'
+              }, 'Вперёд →')
+            )
+          )
+        )
+      );
+    }
+
+    function AccountingView({ bookings, onAddBooking, onImportBookings, onClearBookings, onCopy, onRunCreation, notify }) {
+      const [bDate, setBDate] = useState(todayFormatted());
+      const [bBookingDate, setBBookingDate] = useState(todayFormatted());
+      const [bModel, setBModel] = useState('Мила / Mila');
+      const [bDuration, setBDuration] = useState('1 час');
+      const [bPrice, setBPrice] = useState('700 GEL');
+      const [bOperator, setBOperator] = useState('Eva');
+      const [bTime, setBTime] = useState('18:00');
+      const [bClientPhone, setBClientPhone] = useState('');
+      const [bReview, setBReview] = useState('');
+      const [bAddress, setBAddress] = useState('57 Beri Gabriel Salosi Avenue');
+
+      const [periodPreset, setPeriodPreset] = useState('all');
+      const [filterDate, setFilterDate] = useState('');
+      const [selectedIds, setSelectedIds] = useState([]);
+      const [calcResult, setCalcResult] = useState(null);
+      const [showImportBox, setShowImportBox] = useState(false);
+      const [importRawText, setImportRawText] = useState('');
+
+      const todayStr = todayFormatted();
+
+      const filteredBookings = useMemo(() => {
+        const list = Array.isArray(bookings) ? bookings : [];
+        const q = filterDate.trim();
+        const qLower = q.toLowerCase();
+
+        return list.filter((b) => {
+          const bkDate = b.bookingDate || b.date;
+          if (periodPreset === 'today' && bkDate !== todayStr) return false;
+          if (periodPreset === '09.04.2026' && bkDate !== '09.04.2026') return false;
+          if (periodPreset === '10.04.2026' && bkDate !== '10.04.2026') return false;
+
+          if (!q) return true;
+          return (
+            phoneMatchesQuery(b.clientPhone, q) ||
+            String(bkDate || '').toLowerCase().includes(qLower) ||
+            String(b.date || '').toLowerCase().includes(qLower) ||
+            String(b.model || '').toLowerCase().includes(qLower) ||
+            String(b.operator || '').toLowerCase().includes(qLower) ||
+            String(b.priceText || '').toLowerCase().includes(qLower) ||
+            String(b.review || '').toLowerCase().includes(qLower)
+          );
+        });
+      }, [bookings, periodPreset, filterDate, todayStr]);
+
+      const statsAll = useMemo(() => computeCashStats(filteredBookings), [filteredBookings]);
+
+      const selectedBookings = useMemo(
+        () => filteredBookings.filter((b) => selectedIds.includes(b.id)),
+        [filteredBookings, selectedIds]
+      );
+
+      const toggleSelectOne = (id) => {
+        tgHaptic('light');
+        setSelectedIds((prev) =>
+          prev.includes(id) ? prev.filter((item) => item !== id) : [...prev, id]
+        );
+      };
+
+      const handleSelectAllFiltered = () => {
+        tgHaptic('light');
+        const allFilteredIds = filteredBookings.map((b) => b.id);
+        const allAlreadySelected =
+          allFilteredIds.length > 0 && allFilteredIds.every((id) => selectedIds.includes(id));
+        if (allAlreadySelected) {
+          setSelectedIds((prev) => prev.filter((id) => !allFilteredIds.includes(id)));
+        } else {
+          setSelectedIds((prev) => Array.from(new Set([...prev, ...allFilteredIds])));
+        }
+      };
+
+      const handleSelectToday = () => {
+        tgHaptic('medium');
+        const todayIds = bookings.filter((b) => (b.bookingDate || b.date) === todayStr).map((b) => b.id);
+        setSelectedIds(todayIds);
+        const res = computeCashStats(bookings.filter((b) => (b.bookingDate || b.date) === todayStr));
+        setCalcResult({
+          title: `За сегодня (${todayStr})`,
+          count: res.count,
+          summaryLine: res.summaryLine
+        });
+        notify(todayIds.length > 0 ? `Выделено за сегодня: ${todayIds.length}` : 'Записей за сегодня пока нет');
+      };
+
+      const handleCalculateSelected = () => {
+        tgHaptic('success');
+        const targetList = selectedBookings.length > 0 ? selectedBookings : filteredBookings;
+        const label =
+          selectedBookings.length > 0
+            ? `Выделено записей (${selectedBookings.length})`
+            : `Текущий фильтр (${filteredBookings.length})`;
+        const stats = computeCashStats(targetList);
+        setCalcResult({
+          title: label,
+          count: stats.count,
+          summaryLine: stats.summaryLine
+        });
+      };
+
+      const handleClearSelection = () => {
+        tgHaptic('light');
+        setSelectedIds([]);
+        setCalcResult(null);
+      };
+
+      const handleRunImport = () => {
+        const parsed = parseAccountingExportText(importRawText);
+        if (!parsed.length) {
+          notify('Не удалось распознать записи — проверьте формат текста');
+          return;
+        }
+        onRunCreation('ИМПОРТ БУХГАЛТЕРИИ', `Загружаем ${parsed.length} записей в кассу...`, () => {
+          onImportBookings(parsed);
+          setImportRawText('');
+          setShowImportBox(false);
+        });
+      };
+
+      const handleSaveBooking = (e) => {
+        e.preventDefault();
+        if (!bModel.trim()) return;
+        const parsedAmt = parseAmountFromPriceText(bPrice, null, null);
+        const exactPhone = exactPhoneFromFile(bClientPhone);
+        const finalBookingDate = (bBookingDate || bDate).trim() || todayFormatted();
+        const record = {
+          id: `bk-${Date.now()}`,
+          date: bDate.trim() || finalBookingDate,
+          bookingDate: finalBookingDate,
+          model: bModel.trim(),
+          duration: bDuration.trim(),
+          priceText: bPrice.trim(),
+          amountNum: parsedAmt.amount,
+          currency: parsedAmt.currency,
+          operator: bOperator.trim(),
+          timeSlot: bTime.trim(),
+          clientPhone: exactPhone,
+          review: bReview.trim(),
+          address: bAddress.trim()
+        };
+        onRunCreation('ЗАПИСЬ В КАССУ', `Фиксируем запись по модели ${record.model}...`, () => {
+          onAddBooking(record);
+          onCopy(generatedBookingText, 'Карточка бухгалтерии сохранена и скопирована');
+        });
+      };
+
+      const generatedBookingText = useMemo(() => {
+        const exactPhone = exactPhoneFromFile(bClientPhone);
+        const bkDate = (bBookingDate || bDate).trim();
+        return [
+          `Дата: ${bDate}`,
+          bkDate ? `Дата брони: ${bkDate}` : null,
+          `Модель: ${bModel}`,
+          `Время / длительность: ${bTime} (${bDuration})`,
+          `Оплата: ${bPrice}`,
+          `Оператор: ${bOperator}`,
+          exactPhone ? `Номер клиента: ${exactPhone}` : null,
+          bAddress.trim() ? `Адрес: ${bAddress.trim()}` : null,
+          bReview.trim() ? `Детали / заметка: ${bReview.trim()}` : null
+        ]
+          .filter(Boolean)
+          .join('\n');
+      }, [bDate, bBookingDate, bModel, bDuration, bPrice, bOperator, bTime, bClientPhone, bAddress, bReview]);
+
+      const allFilteredIds = filteredBookings.map((b) => b.id);
+      const isAllFilteredSelected =
+        allFilteredIds.length > 0 && allFilteredIds.every((id) => selectedIds.includes(id));
+
+      return h('div', { className: 'grid grid-cols-1 lg:grid-cols-12 gap-6' },
+        h('form', {
+          onSubmit: handleSaveBooking,
+          className: 'glass-panel lg:col-span-6 rounded-[8px] p-5 space-y-3'
+        },
+          h('div', { className: 'flex items-center justify-between gap-2 mb-2' },
+            h('h2', { className: 'font-brand-brush text-base text-white uppercase' }, 'ЗАПИСЬ ВСТРЕЧИ / БУХГАЛТЕРИЯ'),
+            h('button', {
+              type: 'button',
+              onClick: () => setShowImportBox((v) => !v),
+              className: 'btn-press glass-field px-2.5 py-1 rounded-[7px] hover:border-crimson-600 text-[11px] font-semibold text-crimson-500'
+            }, showImportBox ? 'Скрыть импорт' : '+ Импорт из чата')
+          ),
+
+          showImportBox && h('div', { className: 'glass-field rounded-[8px] p-3 space-y-2 border border-crimson-700/60' },
+            h('p', { className: 'text-[11px] text-zinc-300 leading-snug' },
+              'Вставьте фрагмент выгрузки «Бухгалтерия» (формат Дата: / Модель: / Прайс: / Оператор: / Номер клиента:):'
+            ),
+            h('textarea', {
+              rows: '4',
+              value: importRawText,
+              onChange: (e) => setImportRawText(e.target.value),
+              placeholder: 'Дата: 09.04.2026\nМодель: Алсу\nПродолжительность: 1ч\nПрайс: 200$\nОператор: Денни\nНомер клиента: +995 599 16 71 66',
+              className: 'glass-panel w-full rounded-[7px] p-2.5 text-xs text-white placeholder-zinc-500 outline-none focus:border-crimson-600'
+            }),
+            h('div', { className: 'flex items-center justify-between gap-2' },
+              h('button', {
+                type: 'button',
+                onClick: handleRunImport,
+                className: 'btn-press px-3.5 py-1.5 rounded-[7px] bg-crimson-700 hover:bg-crimson-600 text-xs font-bold text-white'
+              }, 'Разобрать и добавить'),
+              bookings.length > 0 && h('button', {
+                type: 'button',
+                onClick: () => {
+                  onClearBookings();
+                  setSelectedIds([]);
+                  setCalcResult(null);
+                },
+                className: 'btn-press text-[11px] text-zinc-400 hover:text-crimson-500'
+              }, 'Очистить журнал')
+            )
+          ),
+
+          h('div', { className: 'grid grid-cols-1 sm:grid-cols-2 gap-3' },
+            h('div', null,
+              h('label', { className: 'block text-xs text-zinc-400 mb-1' }, 'Дата записи'),
+              h('input', {
+                type: 'text',
+                value: bDate,
+                onChange: (e) => setBDate(e.target.value),
+                className: 'glass-field wavy-contour w-full px-3 py-2 text-sm text-white outline-none'
+              })
+            ),
+            h('div', null,
+              h('label', { className: 'block text-xs text-zinc-400 mb-1' }, 'Дата брони'),
+              h('input', {
+                type: 'text',
+                value: bBookingDate,
+                onChange: (e) => setBBookingDate(e.target.value),
+                placeholder: 'ДД.ММ.ГГГГ',
+                className: 'glass-field wavy-contour w-full px-3 py-2 text-sm text-white outline-none'
+              })
+            )
+          ),
+          h('div', { className: 'grid grid-cols-1 sm:grid-cols-2 gap-3' },
+            h('div', null,
+              h('label', { className: 'block text-xs text-zinc-400 mb-1' }, 'Имя модели'),
+              h('input', {
+                type: 'text',
+                required: true,
+                value: bModel,
+                onChange: (e) => setBModel(e.target.value),
+                className: 'glass-field wavy-contour w-full px-3 py-2 text-sm text-white outline-none'
+              })
+            ),
+            h('div', null,
+              h('label', { className: 'block text-xs text-zinc-400 mb-1' }, 'Время встречи'),
+              h('input', {
+                type: 'text',
+                value: bTime,
+                onChange: (e) => setBTime(e.target.value),
+                className: 'glass-field wavy-contour w-full px-3 py-2 text-sm text-white outline-none'
+              })
+            )
+          ),
+          h('div', { className: 'grid grid-cols-1 sm:grid-cols-3 gap-3' },
+            h('div', null,
+              h('label', { className: 'block text-xs text-zinc-400 mb-1' }, 'Продолжительность'),
+              h('input', {
+                type: 'text',
+                value: bDuration,
+                onChange: (e) => setBDuration(e.target.value),
+                className: 'glass-field wavy-contour w-full px-3 py-2 text-sm text-white outline-none'
+              })
+            ),
+            h('div', null,
+              h('label', { className: 'block text-xs text-zinc-400 mb-1' }, 'Оплата (нал/перевод/крипта)'),
+              h('input', {
+                type: 'text',
+                value: bPrice,
+                onChange: (e) => setBPrice(e.target.value),
+                className: 'glass-field wavy-contour w-full px-3 py-2 text-sm text-white outline-none'
+              })
+            ),
+            h('div', null,
+              h('label', { className: 'block text-xs text-zinc-400 mb-1' }, 'Оператор'),
+              h('input', {
+                type: 'text',
+                value: bOperator,
+                onChange: (e) => setBOperator(e.target.value),
+                className: 'glass-field wavy-contour w-full px-3 py-2 text-sm text-white outline-none'
+              })
+            )
+          ),
+          h('div', { className: 'grid grid-cols-1 sm:grid-cols-2 gap-3' },
+            h('div', null,
+              h('label', { className: 'block text-xs text-zinc-400 mb-1' }, 'Номер клиента (как в файле)'),
+              h('input', {
+                type: 'text',
+                value: bClientPhone,
+                onChange: (e) => setBClientPhone(e.target.value),
+                placeholder: '+995 599 16 71 66',
+                className: 'glass-field wavy-contour w-full px-3 py-2 text-sm text-white placeholder-zinc-400 outline-none'
+              })
+            ),
+            h('div', null,
+              h('label', { className: 'block text-xs text-zinc-400 mb-1' }, 'Адрес / локация'),
+              h('input', {
+                type: 'text',
+                value: bAddress,
+                onChange: (e) => setBAddress(e.target.value),
+                className: 'glass-field wavy-contour w-full px-3 py-2 text-sm text-white outline-none'
+              })
+            )
+          ),
+          h('div', null,
+            h('label', { className: 'block text-xs text-zinc-400 mb-1' }, 'Язык, типажное фото, статус номера и заметки'),
+            h('textarea', {
+              rows: '2',
+              value: bReview,
+              onChange: (e) => setBReview(e.target.value),
+              placeholder: 'Например: EN, типажное фото, номер чистый...',
+              className: 'glass-field wavy-contour w-full px-3 py-2 text-sm text-white placeholder-zinc-400 outline-none'
+            })
+          ),
+          h('div', { className: 'flex flex-wrap gap-2.5 pt-1' },
+            h('button', {
+              type: 'submit',
+              className: 'btn-press px-4 py-2.5 rounded-[8px] bg-crimson-700 hover:bg-crimson-600 text-white text-sm font-semibold'
+            }, 'Сохранить и скопировать'),
+            h('button', {
+              type: 'button',
+              onClick: () =>
+                sendPayloadToBot(
+                  {
+                    type: 'booking',
+                    date: bDate,
+                    bookingDate: (bBookingDate || bDate).trim(),
+                    model: bModel,
+                    time: bTime,
+                    duration: bDuration,
+                    price: bPrice,
+                    operator: bOperator,
+                    clientPhone: exactPhoneFromFile(bClientPhone),
+                    address: bAddress,
+                    note: bReview
+                  },
+                  generatedBookingText,
+                  notify
+                ),
+              className: 'btn-press glass-field px-4 py-2.5 rounded-[8px] hover:border-crimson-600 text-sm text-white font-semibold'
+            }, 'Отправить в бот')
+          ),
+
+          h('div', { className: 'pt-2 border-t border-hairline/70 space-y-2' },
+            h('p', { className: 'text-[11px] uppercase tracking-wider text-zinc-400' }, 'Готовый текст для отправки менеджеру'),
+            h('pre', { className: 'glass-field whitespace-pre-wrap font-sans text-xs text-zinc-200 rounded-[8px] p-3 leading-relaxed' }, generatedBookingText)
+          )
+        ),
+
+        h('div', { className: 'lg:col-span-6 space-y-4' },
+          h('div', { className: 'glass-panel rounded-[8px] p-5 space-y-3' },
+            h('div', { className: 'flex flex-wrap items-center justify-between gap-2' },
+              h('h3', { className: 'text-sm font-extrabold text-white uppercase tracking-wide' }, 'КАССА, ПОИСК И КАЛЬКУЛЯТОР'),
+              h('span', { className: 'text-xs text-zinc-400' }, `Показано: ${filteredBookings.length} / ${bookings.length}`)
+            ),
+
+            h('div', { className: 'flex items-center gap-1.5 overflow-x-auto no-scrollbar pb-0.5' },
+              [
+                { id: 'all', label: 'Все записи' },
+                { id: 'today', label: `Сегодня (${todayStr})` },
+                { id: '09.04.2026', label: 'Бронь 09.04.2026' },
+                { id: '10.04.2026', label: 'Бронь 10.04.2026' }
+              ].map((preset) =>
+                h('button', {
+                  key: preset.id,
+                  type: 'button',
+                  onClick: () => {
+                    tgHaptic('light');
+                    setPeriodPreset(preset.id);
+                  },
+                  className: `btn-press px-2.5 py-1.5 rounded-[7px] text-[11px] font-semibold whitespace-nowrap border ${
+                    periodPreset === preset.id
+                      ? 'bg-crimson-700 border-crimson-600 text-white'
+                      : 'glass-field text-zinc-300 hover:text-white'
+                  }`
+                }, preset.label)
+              )
+            ),
+
+            h('input', {
+              type: 'text',
+              value: filterDate,
+              onChange: (e) => setFilterDate(e.target.value),
+              placeholder: 'Поиск по номеру (в точном виде или цифрам), дате брони, модели, сумме...',
+              className: 'glass-field wavy-contour w-full px-3 py-2 text-xs text-white placeholder-zinc-400 outline-none'
+            }),
+
+            h('div', { className: 'glass-field rounded-[8px] p-3 space-y-2.5 border border-crimson-700/40' },
+              h('div', { className: 'flex flex-wrap items-center justify-between gap-2 text-xs' },
+                h('span', { className: 'text-zinc-300 font-semibold' },
+                  selectedBookings.length > 0
+                    ? `Выделено записей: ${selectedBookings.length}`
+                    : 'Выделите нужные записи галочками или нажмите «Посчитать»'
+                ),
+                h('div', { className: 'flex items-center gap-2' },
+                  h('button', {
+                    type: 'button',
+                    onClick: handleSelectToday,
+                    className: 'btn-press px-2.5 py-1 rounded-[6px] bg-surface border border-hairline hover:border-crimson-600 text-[11px] text-zinc-200 font-semibold'
+                  }, 'Выделить за сегодня'),
+                  h('button', {
+                    type: 'button',
+                    onClick: handleSelectAllFiltered,
+                    className: 'btn-press px-2.5 py-1 rounded-[6px] bg-surface border border-hairline hover:border-crimson-600 text-[11px] text-zinc-200 font-semibold'
+                  }, isAllFilteredSelected ? 'Снять все' : 'Выделить все')
+                )
+              ),
+
+              h('div', { className: 'flex flex-wrap items-center gap-2' },
+                h('button', {
+                  type: 'button',
+                  onClick: handleCalculateSelected,
+                  className: 'btn-press flex-1 min-w-[140px] py-2 px-3 rounded-[8px] bg-crimson-700 hover:bg-crimson-600 text-white text-xs font-extrabold'
+                }, selectedBookings.length > 0 ? `Посчитать выделенное (${selectedBookings.length})` : 'Посчитать текущий список'),
+                (selectedIds.length > 0 || calcResult) && h('button', {
+                  type: 'button',
+                  onClick: handleClearSelection,
+                  className: 'btn-press py-2 px-3 rounded-[8px] bg-surface border border-hairline hover:border-zinc-500 text-xs text-zinc-300'
+                }, 'Сбросить')
+              ),
+
+              calcResult && h('div', { className: 'rounded-[8px] bg-crimson-900/45 border border-crimson-600/70 p-3 space-y-1' },
+                h('div', { className: 'flex items-center justify-between text-[11px] text-zinc-300' },
+                  h('span', { className: 'font-bold text-white' }, calcResult.title),
+                  h('span', null, `Записей: ${calcResult.count}`)
+                ),
+                h('div', { className: 'flex items-center justify-between gap-2 pt-0.5' },
+                  h('span', { className: 'text-sm font-extrabold text-white' }, calcResult.summaryLine),
+                  h('button', {
+                    type: 'button',
+                    onClick: () =>
+                      onCopy(
+                        `${calcResult.title} (${calcResult.count} шт.): ${calcResult.summaryLine}`,
+                        'Результат расчёта скопирован'
+                      ),
+                    className: 'btn-press px-2.5 py-1 rounded-[6px] bg-obsidian/80 border border-hairline hover:border-crimson-500 text-[11px] text-white font-semibold'
+                  }, 'Копировать итог')
+                )
+              )
+            ),
+
+            h('div', { className: 'flex flex-wrap items-center justify-between gap-2 text-xs bg-obsidian/55 border border-hairline rounded-[8px] px-3 py-2' },
+              h('span', { className: 'text-zinc-400' }, 'Сводка по фильтру:'),
+              h('span', { className: 'font-extrabold text-crimson-500' }, statsAll.summaryLine)
+            ),
+
+            filteredBookings.length === 0
+              ? h('p', { className: 'text-xs text-zinc-400 py-4 text-center' }, 'Записей по текущему фильтру не найдено.')
+              : h('div', { className: 'space-y-2 max-h-[420px] overflow-y-auto pr-1' },
+                  filteredBookings.map((bk) => {
+                    const checked = selectedIds.includes(bk.id);
+                    const exactPhone = formatPhoneDisplay(bk.clientPhone);
+                    const bkDate = bk.bookingDate || bk.date;
+                    return h('div', {
+                      key: bk.id,
+                      onClick: () => toggleSelectOne(bk.id),
+                      className: `cursor-pointer rounded-[8px] p-3 text-xs space-y-1 border transition ${
+                        checked
+                          ? 'bg-crimson-900/35 border-crimson-500/80'
+                          : 'glass-field hover:border-crimson-700/60'
+                      }`
+                    },
+                      h('div', { className: 'flex items-center justify-between gap-2 font-semibold text-white' },
+                        h('div', { className: 'flex items-center gap-2 min-w-0' },
+                          h('input', {
+                            type: 'checkbox',
+                            checked,
+                            onChange: () => {},
+                            className: 'accent-crimson-600 w-3.5 h-3.5 rounded shrink-0 cursor-pointer'
+                          }),
+                          h('span', { className: 'truncate' }, `${bk.model} • Бронь: ${bkDate}`)
+                        ),
+                        h('span', { className: 'text-crimson-500 font-extrabold shrink-0' }, bk.priceText)
+                      ),
+                      h('p', { className: 'text-zinc-400 pl-5' },
+                        `Дата записи: ${bk.date} • ${bk.duration}${bk.timeSlot ? ` • ${bk.timeSlot}` : ''} • ${bk.operator}`
+                      ),
+                      exactPhone && h('div', { className: 'pl-5 flex items-center justify-between gap-2' },
+                        h('span', { className: 'text-zinc-200 font-semibold select-all' }, `Номер: ${exactPhone}`),
+                        h('button', {
+                          type: 'button',
+                          onClick: (e) => {
+                            e.stopPropagation();
+                            onCopy(exactPhone, `Номер ${exactPhone} скопирован`);
+                          },
+                          className: 'btn-press px-2 py-0.5 rounded bg-surface/80 border border-hairline hover:border-crimson-600 text-[10px] text-zinc-200'
+                        }, 'Копировать')
+                      ),
+                      bk.review && h('p', { className: 'text-zinc-300 pl-5 leading-snug' }, bk.review)
+                    );
+                  })
+                )
+          )
+        )
+      );
+    }
+
+    function ShiftReportsView({ bookings, shiftReports, onAddShiftReport, onCopy, onRunCreation, notify }) {
+      const [sDate, setSDate] = useState(todayFormatted());
+      const [sMessages, setSMessages] = useState('0');
+      const [sOrdersCount, setSOrdersCount] = useState('0');
+      const [sTotal, setSTotal] = useState('0 GEL');
+      const [sNotes, setSNotes] = useState('');
+
+      const buildShiftText = (rep) => {
+        const dayOrders = bookings.filter((b) => (b.bookingDate || b.date) === rep.date);
+        const ordersLines =
+          dayOrders.length > 0
+            ? dayOrders.map(
+                (o, idx) =>
+                  `${idx + 1}. ${o.model} (бронь ${o.bookingDate || o.date}, ${o.duration}${o.timeSlot ? `, ${o.timeSlot}` : ''}) — ${o.priceText} [${o.operator}]`
+              )
+            : [`Заказов в журнале за ${rep.date}: ${rep.ordersCount}`];
+
+        return [
+          `Дата смены / брони: ${rep.date}`,
+          `Кол-во соо: ${rep.messagesCount}`,
+          `Заказы: ${rep.ordersCount}`,
+          ...ordersLines,
+          `Тотал: ${rep.totalText}`,
+          rep.notes ? `Примечание: ${rep.notes}` : null
+        ]
+          .filter(Boolean)
+          .join('\n');
+      };
+
+      const handleSaveShift = (e) => {
+        e.preventDefault();
+        const newRep = {
+          id: `sh-${Date.now()}`,
+          date: sDate.trim() || todayFormatted(),
+          messagesCount: Number(sMessages) || 0,
+          ordersCount: Number(sOrdersCount) || 0,
+          totalText: sTotal.trim() || '0',
+          notes: sNotes.trim()
+        };
+        onRunCreation('ОТЧЁТ ЗА СМЕНУ', `Собираем итоги за ${newRep.date}...`, () => {
+          onAddShiftReport(newRep);
+          onCopy(buildShiftText(newRep), 'Отчёт за смену сохранён и скопирован');
+          setSNotes('');
+        });
+      };
+
+      return h('div', { className: 'grid grid-cols-1 lg:grid-cols-12 gap-6' },
+        h('form', {
+          onSubmit: handleSaveShift,
+          className: 'glass-panel lg:col-span-6 rounded-[8px] p-5 space-y-3'
+        },
+          h('h2', { className: 'font-brand-brush text-base text-white uppercase mb-2' }, 'СФОРМИРОВАТЬ ОТЧЁТ ЗА СМЕНУ'),
+          h('div', { className: 'grid grid-cols-1 sm:grid-cols-2 gap-3' },
+            h('div', null,
+              h('label', { className: 'block text-xs text-zinc-400 mb-1' }, 'Дата смены / брони'),
+              h('input', {
+                type: 'text',
+                value: sDate,
+                onChange: (e) => setSDate(e.target.value),
+                className: 'glass-field w-full rounded-[8px] px-3 py-2 text-sm text-white outline-none'
+              })
+            ),
+            h('div', null,
+              h('label', { className: 'block text-xs text-zinc-400 mb-1' }, 'Кол-во соо'),
+              h('input', {
+                type: 'number',
+                value: sMessages,
+                onChange: (e) => setSMessages(e.target.value),
+                className: 'glass-field w-full rounded-[8px] px-3 py-2 text-sm text-white outline-none'
+              })
+            ),
+            h('div', null,
+              h('label', { className: 'block text-xs text-zinc-400 mb-1' }, 'Заказы (количество)'),
+              h('input', {
+                type: 'number',
+                value: sOrdersCount,
+                onChange: (e) => setSOrdersCount(e.target.value),
+                className: 'glass-field w-full rounded-[8px] px-3 py-2 text-sm text-white outline-none'
+              })
+            ),
+            h('div', null,
+              h('label', { className: 'block text-xs text-zinc-400 mb-1' }, 'Тотал'),
+              h('input', {
+                type: 'text',
+                value: sTotal,
+                onChange: (e) => setSTotal(e.target.value),
+                className: 'glass-field w-full rounded-[8px] px-3 py-2 text-sm text-white outline-none'
+              })
+            )
+          ),
+          h('div', null,
+            h('label', { className: 'block text-xs text-zinc-400 mb-1' }, 'Примечание по смене'),
+            h('textarea', {
+              rows: '2',
+              value: sNotes,
+              onChange: (e) => setSNotes(e.target.value),
+              placeholder: 'Важные детали смены...',
+              className: 'glass-field w-full rounded-[8px] px-3 py-2 text-sm text-white placeholder-zinc-500 outline-none'
+            })
+          ),
+          h('div', { className: 'flex flex-wrap gap-2.5 pt-1' },
+            h('button', {
+              type: 'submit',
+              className: 'btn-press px-4 py-2.5 rounded-[8px] bg-crimson-700 hover:bg-crimson-600 text-white text-sm font-semibold'
+            }, 'Сохранить и скопировать отчёт'),
+            h('button', {
+              type: 'button',
+              onClick: () => {
+                const previewRep = {
+                  date: sDate.trim() || todayFormatted(),
+                  messagesCount: Number(sMessages) || 0,
+                  ordersCount: Number(sOrdersCount) || 0,
+                  totalText: sTotal.trim() || '0',
+                  notes: sNotes.trim()
+                };
+                sendPayloadToBot(
+                  { type: 'shift_report', ...previewRep },
+                  buildShiftText(previewRep),
+                  notify
+                );
+              },
+              className: 'btn-press glass-field px-4 py-2.5 rounded-[8px] hover:border-crimson-600 text-sm text-white font-semibold'
+            }, 'Отправить отчёт в бот')
+          )
+        ),
+
+        h('div', { className: 'lg:col-span-6 space-y-3' },
+          h('h3', { className: 'text-sm font-bold text-white' }, 'Сохранённые отчёты смен'),
+          shiftReports.length === 0
+            ? h('div', { className: 'glass-panel rounded-[8px] p-5 text-xs text-zinc-400' },
+                'Отчётов за смену пока нет — заполните форму слева, чтобы сохранить и скопировать итог.'
+              )
+            : shiftReports.map((rep) => {
+                const formatted = buildShiftText(rep);
+                return h('div', {
+                  key: rep.id,
+                  className: 'glass-panel rounded-[8px] p-4 space-y-2.5'
+                },
+                  h('div', { className: 'flex items-center justify-between' },
+                    h('span', { className: 'text-sm font-bold text-white' }, `Смена ${rep.date}`),
+                    h('button', {
+                      type: 'button',
+                      onClick: () => onCopy(formatted, `Отчёт за ${rep.date} скопирован`),
+                      className: 'btn-press glass-field px-3 py-1 rounded-[8px] hover:border-crimson-600 text-xs text-zinc-200'
+                    }, 'Копировать отчёт')
+                  ),
+                  h('pre', { className: 'glass-field whitespace-pre-wrap font-sans text-xs text-zinc-300 rounded-[8px] p-3 leading-relaxed' }, formatted)
+                );
+              })
+        )
+      );
+    }
+
+    function OperatorsView({ operators, onAddOperator, onDeleteOperator, onCopy }) {
+      const [name, setName] = useState('');
+      const [phone, setPhone] = useState('');
+      const [role, setRole] = useState('Оператор / Смена');
+      const [shift, setShift] = useState('По графику');
+
+      const handleSubmit = (e) => {
+        e.preventDefault();
+        if (!name.trim() || !phone.trim()) return;
+        onAddOperator({
+          id: `op-${Date.now()}`,
+          name: name.trim(),
+          phone: exactPhoneFromFile(phone),
+          role: role.trim() || 'Оператор',
+          shift: shift.trim() || 'По графику',
+          active: true
+        });
+        setName('');
+        setPhone('');
+      };
+
+      return h('div', { className: 'space-y-6' },
+        h('section', { className: 'glass-panel rounded-[8px] p-5' },
+          h('h2', { className: 'font-brand-brush text-base sm:text-lg text-white uppercase mb-4' }, 'ДОБАВИТЬ УЧАСТНИКА КОМАНДЫ'),
+          h('form', { onSubmit: handleSubmit, className: 'grid grid-cols-1 sm:grid-cols-4 gap-3' },
+            h('input', {
+              type: 'text',
+              required: true,
+              value: name,
+              onChange: (e) => setName(e.target.value),
+              placeholder: 'Имя / позывной',
+              className: 'glass-field wavy-contour px-3.5 py-2.5 text-sm text-white placeholder-zinc-400 outline-none'
+            }),
+            h('input', {
+              type: 'text',
+              required: true,
+              value: phone,
+              onChange: (e) => setPhone(e.target.value),
+              placeholder: '+995 5XX XX XX XX',
+              className: 'glass-field wavy-contour px-3.5 py-2.5 text-sm text-white placeholder-zinc-400 outline-none'
+            }),
+            h('input', {
+              type: 'text',
+              value: role,
+              onChange: (e) => setRole(e.target.value),
+              placeholder: 'Роль',
+              className: 'glass-field wavy-contour px-3.5 py-2.5 text-sm text-white placeholder-zinc-400 outline-none'
+            }),
+            h('button', {
+              type: 'submit',
+              className: 'btn-press px-4 py-2.5 rounded-[8px] bg-crimson-700 hover:bg-crimson-600 text-white text-sm font-semibold'
+            }, '+ Добавить')
+          )
+        ),
+
+        h('section', { className: 'grid grid-cols-1 sm:grid-cols-2 gap-3' },
+          operators.map((op) =>
+            h('div', {
+              key: op.id,
+              className: 'glass-panel rounded-[8px] p-4 flex items-center justify-between gap-3'
+            },
+              h('div', { className: 'space-y-1 min-w-0' },
+                h('div', { className: 'flex items-center gap-2' },
+                  h('span', { className: 'w-2 h-2 rounded-full bg-emerald-400 shrink-0' }),
+                  h('h3', { className: 'text-sm font-bold text-white truncate' }, op.name)
+                ),
+                h('p', { className: 'text-sm font-semibold text-crimson-500' }, formatPhoneDisplay(op.phone)),
+                h('p', { className: 'text-xs text-zinc-400 truncate' }, `${op.role} • ${op.shift}`)
+              ),
+              h('div', { className: 'flex items-center gap-2 shrink-0' },
+                h('button', {
+                  type: 'button',
+                  onClick: () => onCopy(formatPhoneDisplay(op.phone), `Номер ${op.name} скопирован`),
+                  className: 'btn-press glass-field px-3 py-1.5 rounded-[8px] hover:border-zinc-500 text-xs text-zinc-200'
+                }, 'Копировать'),
+                operators.length > 1 && h('button', {
+                  type: 'button',
+                  onClick: () => onDeleteOperator(op.id),
+                  title: 'Удалить',
+                  className: 'btn-press glass-field px-2.5 py-1.5 rounded-[8px] hover:border-crimson-600 text-xs text-zinc-400 hover:text-crimson-500'
+                }, '✕')
+              )
+            )
+          )
+        )
+      );
+    }
+
+    function RulesAndFinesView() {
+      return h('div', { className: 'grid grid-cols-1 lg:grid-cols-2 gap-6' },
+        h('section', { className: 'glass-panel rounded-[8px] p-5 space-y-3' },
+          h('h2', { className: 'font-brand-brush text-base text-white uppercase' }, 'ПРАВИЛА РАБОТЫ (TABU)'),
+          h('div', { className: 'space-y-3' },
+            INITIAL_RULES.map((rule, idx) =>
+              h('div', {
+                key: rule.id,
+                className: 'glass-field rounded-[8px] p-3.5 space-y-1'
+              },
+                h('p', { className: 'text-sm font-bold text-white' }, `${idx + 1}. ${rule.title}`),
+                h('p', { className: 'text-xs sm:text-sm text-zinc-300 leading-relaxed' }, rule.body)
+              )
+            )
+          )
+        ),
+
+        h('section', { className: 'glass-panel rounded-[8px] p-5 space-y-3' },
+          h('h2', { className: 'font-brand-brush text-base text-crimson-500 uppercase' }, 'ШТРАФЫ (TABU)'),
+          h('div', { className: 'space-y-2' },
+            INITIAL_FINES.map((fine) =>
+              h('div', {
+                key: fine.id,
+                className: 'glass-field rounded-[8px] p-3 flex flex-col sm:flex-row sm:items-center justify-between gap-2'
+              },
+                h('p', { className: 'text-xs sm:text-sm text-zinc-200' }, fine.violation),
+                h('span', { className: 'px-2.5 py-1 rounded-[6px] bg-crimson-900/50 border border-crimson-700/60 text-xs font-semibold text-white shrink-0 self-start sm:self-center' }, fine.penalty)
+              )
+            )
+          )
+        )
+      );
+    }
+
+    // =========================================================================
+    // 9. КОРНЕВОЙ КОМПОНЕНТ ПРИЛОЖЕНИЯ
+    // =========================================================================
+    function App() {
+      const [activeTab, setActiveTab] = useState('accounting');
+      const [toastMessage, setToastMessage] = useState('');
+      const [creationAnim, setCreationAnim] = useState(null);
+      const [tgUserLabel, setTgUserLabel] = useState('');
+      const [overflowOpen, setOverflowOpen] = useState(false);
+      const logoInputRef = useRef(null);
+
+      useEffect(() => {
+        if (!tg) return;
+        try {
+          tg.ready();
+          tg.expand();
+          if (typeof tg.setHeaderColor === 'function') tg.setHeaderColor('#0A090A');
+          if (typeof tg.setBackgroundColor === 'function') tg.setBackgroundColor('#0A090A');
+          const u = tg.initDataUnsafe && tg.initDataUnsafe.user;
+          if (u) {
+            setTgUserLabel(u.username ? `@${u.username}` : u.first_name || 'TG User');
+          }
+        } catch (e) {}
+      }, []);
+
+      useEffect(() => {
+        if (!tg || !tg.BackButton) return;
+        try {
+          if (activeTab !== 'home') {
+            tg.BackButton.show();
+            const backHandler = () => {
+              tgHaptic('light');
+              setActiveTab('home');
+            };
+            tg.BackButton.onClick(backHandler);
+            return () => tg.BackButton.offClick(backHandler);
+          } else {
+            tg.BackButton.hide();
+          }
+        } catch (e) {}
+      }, [activeTab]);
+
+      const [blacklist, setBlacklist] = useState(() => {
+        try {
+          const raw = localStorage.getItem(STORAGE_KEY);
+          if (raw) {
+            const parsed = JSON.parse(raw);
+            if (Array.isArray(parsed.blacklist)) return parsed.blacklist;
+          }
+        } catch (e) {}
+        return INITIAL_BLACKLIST;
+      });
+
+      const [models, setModels] = useState(() => {
+        try {
+          const raw = localStorage.getItem(STORAGE_KEY);
+          if (raw) {
+            const parsed = JSON.parse(raw);
+            if (Array.isArray(parsed.models) && parsed.models.length > 0) return parsed.models;
+          }
+        } catch (e) {}
+        return INITIAL_MODELS;
+      });
+
+      const [operators, setOperators] = useState(() => {
+        try {
+          const raw = localStorage.getItem(STORAGE_KEY);
+          if (raw) {
+            const parsed = JSON.parse(raw);
+            if (Array.isArray(parsed.operators) && parsed.operators.length > 0) return parsed.operators;
+          }
+        } catch (e) {}
+        return INITIAL_OPERATORS;
+      });
+
+      const [bookings, setBookings] = useState(() => {
+        try {
+          const raw = localStorage.getItem(STORAGE_KEY);
+          if (raw) {
+            const parsed = JSON.parse(raw);
+            if (parsed.accountingSeedVersion === ACCOUNTING_SEED_VERSION && Array.isArray(parsed.bookings)) {
+              return parsed.bookings;
+            }
+          }
+        } catch (e) {}
+        return INITIAL_BOOKINGS;
+      });
+
+      const [shiftReports, setShiftReports] = useState(() => {
+        try {
+          const raw = localStorage.getItem(STORAGE_KEY);
+          if (raw) {
+            const parsed = JSON.parse(raw);
+            if (Array.isArray(parsed.shiftReports)) return parsed.shiftReports;
+          }
+        } catch (e) {}
+        return INITIAL_SHIFT_REPORTS;
+      });
+
+      const [customLogo, setCustomLogo] = useState(() => {
+        try {
+          const raw = localStorage.getItem(STORAGE_KEY);
+          if (raw) {
+            const parsed = JSON.parse(raw);
+            if (typeof parsed.customLogo === 'string') return parsed.customLogo;
+          }
+        } catch (e) {}
+        return '';
+      });
+
+      useEffect(() => {
+        try {
+          localStorage.setItem(
+            STORAGE_KEY,
+            JSON.stringify({
+              accountingSeedVersion: ACCOUNTING_SEED_VERSION,
+              blacklist,
+              models,
+              operators,
+              bookings,
+              shiftReports,
+              customLogo
+            })
+          );
+        } catch (e) {
+          console.warn('Не удалось сохранить состояние в localStorage:', e);
+        }
+      }, [blacklist, models, operators, bookings, shiftReports, customLogo]);
+
+      const notify = (msg) => {
+        setToastMessage(msg);
+        window.clearTimeout(window.__tabToastTimer);
+        window.__tabToastTimer = window.setTimeout(() => {
+          setToastMessage('');
+        }, 2300);
+      };
+
+      const runCreationSquare = (title, subtitle, callback) => {
+        tgHaptic('medium');
+        setCreationAnim({ title, subtitle });
+        window.setTimeout(() => {
+          try {
+            if (typeof callback === 'function') callback();
+          } finally {
+            setCreationAnim(null);
+            tgHaptic('success');
+          }
+        }, 560);
+      };
+
+      const handleCopy = (text, label = 'Скопировано') => {
+        copyToClipboard(text);
+        tgHaptic('light');
+        notify(label);
+      };
+
+      const handleLogoFileChange = (e) => {
+        const file = e.target.files && e.target.files[0];
+        if (!file) return;
+        const reader = new FileReader();
+        reader.onload = () => {
+          setCustomLogo(String(reader.result || ''));
+          notify('Фон и эмблема обновлены');
+        };
+        reader.readAsDataURL(file);
+      };
+
+      const handleAddBlacklist = (entry) => {
+        setBlacklist((prev) => [{ ...entry, phone: exactPhoneFromFile(entry.phone), id: `bl-${Date.now()}` }, ...prev]);
+        notify('Номер добавлен в ЧС');
+      };
+
+      const handleDeleteBlacklist = (id) => {
+        setBlacklist((prev) => prev.filter((item) => item.id !== id));
+        tgHaptic('warning');
+        notify('Запись удалена из ЧС');
+      };
+
+      const handleAddModel = (model) => {
+        setModels((prev) => [...prev, model]);
+        notify(`Модель ${model.name} добавлена`);
+      };
+
+      const handleUpdateModel = (updated) => {
+        setModels((prev) => prev.map((m) => (m.id === updated.id ? updated : m)));
+      };
+
+      const handleDeleteModel = (id) => {
+        setModels((prev) => prev.filter((m) => m.id !== id));
+        notify('Карточка модели удалена');
+      };
+
+      const handleAddOperator = (op) => {
+        setOperators((prev) => [...prev, { ...op, phone: exactPhoneFromFile(op.phone) }]);
+        tgHaptic('success');
+        notify('Номер добавлен');
+      };
+
+      const handleDeleteOperator = (id) => {
+        setOperators((prev) => prev.filter((op) => op.id !== id));
+        notify('Номер удалён');
+      };
+
+      const handleAddBooking = (bk) => {
+        setBookings((prev) => [
+          {
+            ...bk,
+            clientPhone: exactPhoneFromFile(bk.clientPhone),
+            bookingDate: bk.bookingDate || bk.date || todayFormatted()
+          },
+          ...prev
+        ]);
+      };
+
+      const handleAddShiftReport = (rep) => {
+        setShiftReports((prev) => [rep, ...prev]);
+      };
+
+      const navItems = [
+        { id: 'home', label: 'Проверка' },
+        { id: 'blacklist', label: 'ЧС номера' },
+        { id: 'models', label: 'Модели' },
+        { id: 'operators', label: 'Команда' },
+        { id: 'accounting', label: 'Бухгалтерия' },
+        { id: 'shifts', label: 'Отчёты смен' },
+        { id: 'rules', label: 'Правила и штрафы' }
+      ];
+
+      return h('div', { className: 'relative min-h-screen bg-obsidian text-zinc-100 flex flex-col' },
+        h(AmbientBackdropPhoto, { customLogo }),
+        h(CreationSquareModal, { creation: creationAnim }),
+        h(ToastBanner, { message: toastMessage }),
+        h(OverflowMenuModal, {
+          open: overflowOpen,
+          onClose: () => setOverflowOpen(false),
+          bookings,
+          onAddBooking: handleAddBooking,
+          onCopy: handleCopy,
+          onRunCreation: runCreationSquare,
+          onNavigate: setActiveTab,
+          onCustomLogoClick: () => logoInputRef.current && logoInputRef.current.click(),
+          customLogo,
+          onResetCustomLogo: () => {
+            setCustomLogo('');
+            notify('Возвращён фон TABU');
+          }
+        }),
+
+        h('header', { className: 'sticky top-0 z-30 bg-obsidian/85 backdrop-blur-md border-b border-hairline' },
+          h('div', { className: 'max-w-6xl mx-auto px-4 h-14 flex items-center justify-between gap-3' },
+            h('div', { className: 'flex items-center gap-3 min-w-0' },
+              h('button', {
+                type: 'button',
+                onClick: () => {
+                  tgHaptic('light');
+                  setActiveTab('home');
+                },
+                className: 'btn-press shrink-0'
+              }, h(TabBrandLogo, { customLogo })),
+              h('span', { className: 'hidden sm:inline-block text-xs text-zinc-400 border-l border-hairline pl-3 truncate' },
+                'TABU • Telegram Mini App'
+              ),
+              tgUserLabel && h('span', { className: 'px-2 py-0.5 rounded-[6px] bg-crimson-900/50 border border-crimson-700/60 text-[11px] text-crimson-500 font-semibold truncate' },
+                tgUserLabel
+              )
+            ),
+
+            h('nav', { className: 'hidden md:flex items-center gap-1.5' },
+              navItems.map((item) =>
+                h('button', {
+                  key: item.id,
+                  type: 'button',
+                  onClick: () => {
+                    tgHaptic('light');
+                    setActiveTab(item.id);
+                  },
+                  className: `btn-press px-3.5 py-2 rounded-[10px] text-xs font-bold transition ${
+                    activeTab === item.id
+                      ? 'bg-crimson-700 text-white shadow-md shadow-crimson-900/40'
+                      : 'text-zinc-400 hover:text-white hover:bg-surface'
+                  }`
+                }, item.label)
+              )
+            ),
+
+            h('div', { className: 'flex items-center gap-1.5 shrink-0' },
+              h('button', {
+                type: 'button',
+                onClick: () => {
+                  tgHaptic('medium');
+                  setOverflowOpen(true);
+                },
+                title: 'Сводка по периодам и касса за сегодня',
+                'aria-label': 'Меню операций',
+                className: 'btn-press px-3 py-1.5 rounded-[8px] bg-surface border border-hairline hover:border-crimson-600 text-sm font-extrabold text-white tracking-widest flex items-center justify-center'
+              }, '⋮'),
+              h('input', {
+                ref: logoInputRef,
+                type: 'file',
+                accept: 'image/*',
+                onChange: handleLogoFileChange,
+                className: 'hidden'
+              })
+            )
+          )
+        ),
+
+        h('main', { className: 'relative z-10 flex-1 max-w-6xl w-full mx-auto px-4 pt-5 pb-28 md:pb-10' },
+          h('div', { key: activeTab, className: 'tab-stage-enter' },
+            activeTab === 'home' && h(HomeView, {
+              blacklist,
+              bookings,
+              models,
+              operators,
+              onNavigate: setActiveTab,
+              onCopy: handleCopy,
+              onQuickAddBlacklist: handleAddBlacklist,
+              onRunCreation: runCreationSquare
+            }),
+            activeTab === 'blacklist' && h(BlacklistView, {
+              blacklist,
+              onAdd: handleAddBlacklist,
+              onDelete: handleDeleteBlacklist,
+              onCopy: handleCopy,
+              onRunCreation: runCreationSquare
+            }),
+            activeTab === 'models' && h(ModelsView, {
+              models,
+              onAddModel: handleAddModel,
+              onUpdateModel: handleUpdateModel,
+              onDeleteModel: handleDeleteModel,
+              onCopy: handleCopy,
+              onRunCreation: runCreationSquare
+            }),
+            activeTab === 'operators' && h(OperatorsView, {
+              operators,
+              onAddOperator: handleAddOperator,
+              onDeleteOperator: handleDeleteOperator,
+              onCopy: handleCopy
+            }),
+            activeTab === 'accounting' && h(AccountingView, {
+              bookings,
+              onAddBooking: handleAddBooking,
+              onImportBookings: (importedList) => {
+                setBookings((prev) => [...importedList, ...prev]);
+                notify(`Добавлено записей: ${importedList.length}`);
+              },
+              onClearBookings: () => {
+                setBookings([]);
+                notify('Журнал бухгалтерии очищен');
+              },
+              onCopy: handleCopy,
+              onRunCreation: runCreationSquare,
+              notify
+            }),
+            activeTab === 'shifts' && h(ShiftReportsView, {
+              bookings,
+              shiftReports,
+              onAddShiftReport: handleAddShiftReport,
+              onCopy: handleCopy,
+              onRunCreation: runCreationSquare,
+              notify
+            }),
+            activeTab === 'rules' && h(RulesAndFinesView)
+          )
+        ),
+
+        h('nav', { className: 'md:hidden fixed bottom-0 inset-x-0 z-30 mobile-dock-nav' },
+          h('div', { className: 'flex items-stretch gap-2 px-2.5 pt-3 pb-1.5 overflow-x-auto no-scrollbar' },
+            navItems.map((item) => {
+              const active = activeTab === item.id;
+              return h('button', {
+                key: item.id,
+                type: 'button',
+                onClick: () => {
+                  tgHaptic('medium');
+                  setActiveTab(item.id);
+                },
+                className: `mobile-nav-btn shrink-0 min-w-[84px] min-h-[54px] py-2.5 px-3 rounded-[15px] text-[12px] font-extrabold leading-tight flex flex-col items-center justify-center text-center ${
+                  active ? 'mobile-nav-btn--active' : 'mobile-nav-btn--idle'
+                }`
+              },
+                h('span', { className: 'relative z-10 whitespace-nowrap' }, item.label),
+                active && h('span', { className: 'mobile-nav-indicator relative z-10' })
+              );
+            })
+          )
+        )
+      );
+    }
+
+    const rootEl = document.getElementById('root');
+    ReactDOM.createRoot(rootEl).render(h(App));
+  </script>
+</body>
+</html>
